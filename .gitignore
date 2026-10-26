@@ -29,6 +29,13 @@ logs/
 # Scratch files
 scratch_*
 
+# Customizations & skills (local only)
+.agents/
+
+# Archive zips and model zip folders
+*.zip
+rc/
+
 # IDE & OS files
 .idea/
 .vscode/
