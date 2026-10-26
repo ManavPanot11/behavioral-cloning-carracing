@@ -24,8 +24,8 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
 | 3D Phase | Description | Status | Verification Evidence / Gate Notes |
 |:---:|:---|:---:|:---|
 | **Phase 0** | Discovery & Safety Check | **DONE** | Process audit verified no running experiment; branch `viewer-3d` checked out; constants documented from Gym CarRacing source. |
-| **Phase 1** | Replay Export (`f1sim export3d`, 6 cars, wheel flags, coords) | **IN PROGRESS** | 6-car grid expansion (APX, VEL, NDX, ZEN, RDR, ORB), wheel track-limit flags, compact JSON exporter, coordinate test on asymmetric track. |
-| **Phase 2** | 3D Scene (`docs/viewer/index.html` + `js/`, Three.js r128 offline) | **PLANNED** | Night race with floodlights, procedural asphalt ribbon, red/white kerbs, single checkered line, 5-light start gantry, low-poly procedural F1 cars, 6 camera modes. |
+| **Phase 1** | Replay Export (`f1sim export3d`, 6 cars, wheel flags, coords) | **DONE** | 6-car grid expansion (APX, VEL, NDX, ZEN, RDR, ORB), 4-wheel track-limit flags, compact JSON exporter (`race_3003.json` at 0.79 MB < 6 MB), coordinate test on asymmetric track passes (det(R)=1.0). |
+| **Phase 2** | 3D Scene (`docs/viewer/index.html` + `js/`, Three.js r128 offline) | **IN PROGRESS** | Night race with floodlights, procedural asphalt ribbon, red/white kerbs, single checkered line, 5-light start gantry, low-poly procedural F1 cars, 6 camera modes. |
 | **Phase 3** | Playback & HUD (Timing Tower, Grid Config, Manual Start) | **PLANNED** | Manual lights out button, grid position selector, timing tower with persistent timestamps, HUD telemetry with labelled $K$, responsive layout, drag-and-drop. |
 | **Phase 4** | Deterministic Video & Media Capture (`video3d`) | **PLANNED** | Frame-by-frame capture script, 20s hero GIF (<10MB), race video, screenshots on showcase seeds 3000-3019, frame time benchmark. |
 | **Phase 5** | Repository & README Update | **PLANNED** | Updated README with hero GIF, 3D viewer docs, GitHub Pages deployment guide, vendor MIT license, unit tests. |

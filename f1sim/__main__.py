@@ -30,6 +30,12 @@ def main():
     parser_wk.add_argument("--gif", type=str, default="videos/f1_weekend_3003.gif", help="Path to save showcase GIF")
     parser_wk.add_argument("--telemetry", type=str, default="data/telemetry_latest.json.gz", help="Path to save replay telemetry")
 
+    # export3d command
+    parser_exp = subparsers.add_parser("export3d", help="Run race and export 3D replay JSON for WebGL viewer")
+    parser_exp.add_argument("--seed", type=int, default=3003, help="Showcase track seed (3000-3019)")
+    parser_exp.add_argument("--laps", type=int, default=2, help="Number of laps to race")
+    parser_exp.add_argument("--out", type=str, default="docs/viewer/data/race_3003.json", help="Path to save 3D JSON")
+
     args = parser.parse_args()
 
     if args.command == "doctor":
@@ -75,6 +81,14 @@ def main():
         print(f"\nHero Video: {video_path}")
         print(f"Showcase GIF: {gif_path}")
         print("=" * 60)
+    elif args.command == "export3d":
+        from f1sim.export3d import run_and_export_3d
+        print("=" * 60)
+        print(f"Exporting 3D Grand Prix Replay — Seed {args.seed} ({args.laps} Laps)")
+        print("=" * 60)
+        def on_progress(step, max_steps, p1):
+            print(f"Step {step:4d} | Leader: {p1.get('code', '---')} | Laps: {p1.get('laps', 0)}/{args.laps} | Gap: {p1.get('gap', '-')}", flush=True)
+        run_and_export_3d(track_seed=args.seed, total_laps=args.laps, out_path=args.out, progress_callback=on_progress)
     else:
         parser.print_help()
 

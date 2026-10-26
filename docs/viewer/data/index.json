@@ -1,0 +1,10 @@
+[
+  {
+    "id": "race_3003",
+    "name": "Showcase Grand Prix — Seed 3003 (6 Cars, 2 Laps)",
+    "file": "data/race_3003.json",
+    "seed": 3003,
+    "laps": 2,
+    "cars": 6
+  }
+]

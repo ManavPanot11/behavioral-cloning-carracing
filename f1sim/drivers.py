@@ -61,6 +61,24 @@ TEAMS = {
         "code": "TAN",
         "number": 88,
     },
+    "RDR": {
+        "name": "Red Ridge GP",
+        "color": (0, 230, 118),       # Racing Emerald (#00E676)
+        "hex": "#00E676",
+        "secondary": "#002B14",
+        "driver": "Liam O'Connor",
+        "code": "OCO",
+        "number": 11,
+    },
+    "ORB": {
+        "name": "Orbital Racing",
+        "color": (176, 38, 255),      # Hyper Violet (#B026FF)
+        "hex": "#B026FF",
+        "secondary": "#210038",
+        "driver": "Elena Rostov",
+        "code": "ROS",
+        "number": 77,
+    },
 }
 
 
