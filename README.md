@@ -12,6 +12,49 @@ An end-to-end deep behavioral cloning, DAgger investigation, and premium F1-insp
    └────────────────────────────────────────────────────────────────────────┘
 ```
 
+![Autonomous Grand Prix 3D Showcase](docs/media/hero.gif)
+
+> **3D VISUALISATION · SIM PHYSICS IS 2D**  
+> *Notice: All physics, steering mechanics, vehicle dynamics, and lap times are computed strictly by the 2D Box2D engine in Gymnasium `CarRacing-v3`. The 3D viewer is purely a real-time rendering layer. Unofficial F1-inspired motorsport simulation; not affiliated with Formula 1 or the FIA.*
+
+---
+
+## 🏎️ 3D WebGL Replay Viewer
+
+The project features a full 3D night-race WebGL replay viewer built with Three.js (vendored offline r128, zero CDN dependencies) with authentic broadcast presentation.
+
+### Live Demo & GitHub Pages Setup
+- **Local Browser**: Launch via `python -m http.server 8080` and open [http://localhost:8080/docs/viewer/index.html](http://localhost:8080/docs/viewer/index.html).
+- **GitHub Pages Deployment**:
+  1. In your GitHub repository, navigate to **Settings** > **Pages**.
+  2. Under **Build and deployment** > **Source**, select **Deploy from a branch**.
+  3. Select branch `main` (or active branch) and choose the `/docs` folder, then click **Save**.
+  *(Note: Do not enable GitHub Pages automatically; configure it via repository settings when ready to publish.)*
+
+### How to Export & View a Replay (3-Step Guide)
+1. **Export 3D Replay Telemetry**:
+   ```powershell
+   python -m f1sim export3d --seed 3003 --laps 2 --out docs/viewer/data/race_3003.json
+   ```
+2. **Launch Local HTTP Server**:
+   ```powershell
+   python -m http.server 8080
+   ```
+3. **Open Viewer in Browser**:
+   Open [http://localhost:8080/docs/viewer/index.html](http://localhost:8080/docs/viewer/index.html) (or drag-and-drop any replay JSON directly onto the canvas).
+
+### Simulation Truth vs. Cosmetic Effects
+| Feature | Type | Source & Verification |
+|:---|:---:|:---|
+| **Car Position & Yaw** | **SIM TRUTH** | Exact $(x, y)$ world coordinates and heading angle from 2D simulation log ($X_{\text{3D}} = x_{\text{sim}}, Z_{\text{3D}} = -y_{\text{sim}}$). |
+| **Speed Telemetry** | **SIM TRUTH** | Real Box2D linear velocity ($\text{km/h} = 3.6 \times v$). |
+| **Inputs (Gas/Brake/Steer)** | **SIM TRUTH** | Logged action vectors executed by neural policies / expert driver. |
+| **Wheel Track Limits** | **SIM TRUTH** | Real-time contact booleans for all 4 wheels `[FL, FR, RL, RR]` via `FrictionDetector`. |
+| **Timing & Gaps** | **SIM TRUTH** | Common-checkpoint micro-sector interval deltas from `f1sim.timing`. |
+| **Body Pitch & Roll** | *Cosmetic* | Dynamic chassis lean derived from longitudinal acceleration and lateral G ($\pm 2.5^\circ$). |
+| **Wheel Spin & Steering** | *Cosmetic* | Visual rotation proportional to speed; front wheels turn to match steer action. |
+| **Night Floodlights & Sky** | *Cosmetic* | Night atmosphere with 1,800 stars, track floodlight poles, and soft car shadow maps. |
+
 ---
 
 ## 1. Quickstart
@@ -108,6 +151,8 @@ In strict accordance with unofficial branding regulations:
 | **Veloce Corse** | `VEL` | Marco Silva (`SIL`) | 🟥 Crimson / Carbon (`#FF1744`) | Plain Behavioral Cloning Seed 0 |
 | **Nordic Dynamics** | `NDX` | Lukas Lind (`LIN`) | 🔷 Cobalt / Neon (`#2979FF`) | Augmented Recovery Seed 0 |
 | **Zenith Motorsport** | `ZEN` | Kai Tanaka (`TAN`) | 🟨 Cyber Gold / Black (`#FFD600`) | Scripted Pure-Pursuit Expert |
+| **Redline Dynamics** | `RDR` | Liam O'Connor (`OCO`) | 🟩 Racing Emerald (`#00E676`) | DAgger Seed 1 |
+| **Orbital Racing** | `ORB` | Elena Rostov (`ROS`) | 🟪 Hyper Violet (`#B026FF`) | Augmented Recovery Seed 1 |
 
 ---
 

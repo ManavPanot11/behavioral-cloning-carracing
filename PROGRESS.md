@@ -28,7 +28,7 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
 | **Phase 2** | 3D Scene (`docs/viewer/index.html` + `js/`, Three.js r128 offline) | **DONE** | Night race with floodlights, procedural asphalt ribbon, red/white kerbs, single checkered line, 5-light start gantry, low-poly procedural F1 cars, 6 camera modes. Verified in browser subagent. |
 | **Phase 3** | Playback & HUD (Timing Tower, Grid Config, Manual Start) | **DONE** | Timing tower click-to-focus without time reset, grid position selector modal, manual 5-light FIA start sequence, telemetry HUD with $K=3.6$ note, responsive layouts tested. |
 | **Phase 4** | Deterministic Video & Media Capture (`video3d`) | **DONE** | Frame-by-frame capture script (`f1sim/video3d.py`), 20s hero GIF (`docs/media/hero.gif` at 9.21 MB < 10 MB), race video (`docs/media/race3d.mp4` at 7.37 MB < 25 MB), 6 screenshots on showcase seed 3003, performance benchmark (0.435 ms/frame, >2200 FPS). |
-| **Phase 5** | Repository & README Update | **IN PROGRESS** | Updated README with hero GIF, 3D viewer docs, GitHub Pages deployment guide, vendor MIT license, unit tests. |
+| **Phase 5** | Repository & README Update | **DONE** | Updated README with hero GIF, 3D viewer section, GitHub Pages deployment guide, vendor MIT license, docs/viewer/README.md, all 39 unit tests passing. |
 
 ---
 
@@ -137,5 +137,22 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
   - Low Quality: 0.376 ms/frame (2,659 FPS), 236 draw calls, 19,076 triangles.
   - Medium Quality: 0.435 ms/frame (2,298 FPS), 204 draw calls, 18,678 triangles.
   - High Quality: 0.419 ms/frame (2,386 FPS), 200 draw calls, 18,630 triangles.
+
+### 3D Viewer Phase 5: Repository & Documentation
+- [x] Updated `README.md` with:
+  - Hero GIF at top of document (`docs/media/hero.gif`).
+  - Dedicated "3D WebGL Replay Viewer" section with local execution guide and GitHub Pages deployment instructions (Settings -> Pages -> branch main, folder /docs).
+  - Explicit Simulation Truth vs. Cosmetic breakdown table.
+  - Mandatory disclaimer: "3D VISUALISATION · SIM PHYSICS IS 2D".
+  - 3-step guide to export and view replays.
+  - Expanded fictional constructors roster to all 6 teams (APX, VEL, NDX, ZEN, RDR, ORB).
+  - Preserved all experimental results numbers from `results/test_results.csv`.
+- [x] Created `docs/viewer/README.md` with complete keyboard map (1-6 cameras, Space, F, H), coordinate system notes, and offline usage guide.
+- [x] Vendored Three.js r128 UMD (603 KB) and MIT License in `docs/viewer/vendor/`.
+- [x] Vendored OFL BigShoulders font in `docs/viewer/fonts/`.
+- [x] Verified zero tracked files over 50 MB, video under 25 MB (`race3d.mp4` 7.37 MB), hero GIF under 10 MB (`hero.gif` 9.21 MB).
+- [x] Updated `.gitignore` to prevent temporary MP4s.
+- [x] All 39 unit tests in `tests/` pass cleanly.
+
 
 

@@ -20,6 +20,7 @@ videos/*.mp4
 videos/test_2laps.mp4
 videos/race_10laps_f1.mp4
 videos/race_quad.mp4
+*.tmp.mp4
 
 # Logs
 logs/

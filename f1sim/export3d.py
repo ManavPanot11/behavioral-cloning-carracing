@@ -398,6 +398,16 @@ def run_and_export_3d(
 
     # 6. Final Leaderboard and Classification
     final_lb = timing.compute_leaderboard(current_step=step)
+    serializable_lb = []
+    for row in final_lb:
+        r = dict(row)
+        for s_key in ("s1", "s2", "s3"):
+            sec = r.get(s_key)
+            if sec is not None and hasattr(sec, "time_s"):
+                r[s_key] = {"time_s": round(float(sec.time_s), 3), "status": sec.status}
+            else:
+                r[s_key] = None
+        serializable_lb.append(r)
 
     # 7. Assemble Complete 3D Replay JSON
     drivers_list = []
@@ -443,7 +453,7 @@ def run_and_export_3d(
         "drivers": drivers_list,
         "track": track_geom,
         "events": race_events,
-        "leaderboard": final_lb,
+        "leaderboard": serializable_lb,
         "cars": car_trajectories,
     }
 
