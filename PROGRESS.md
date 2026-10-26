@@ -19,6 +19,19 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
 
 ---
 
+## 3D Replay Viewer (Branch `viewer-3d`)
+
+| 3D Phase | Description | Status | Verification Evidence / Gate Notes |
+|:---:|:---|:---:|:---|
+| **Phase 0** | Discovery & Safety Check | **DONE** | Process audit verified no running experiment; branch `viewer-3d` checked out; constants documented from Gym CarRacing source. |
+| **Phase 1** | Replay Export (`f1sim export3d`, 6 cars, wheel flags, coords) | **IN PROGRESS** | 6-car grid expansion (APX, VEL, NDX, ZEN, RDR, ORB), wheel track-limit flags, compact JSON exporter, coordinate test on asymmetric track. |
+| **Phase 2** | 3D Scene (`docs/viewer/index.html` + `js/`, Three.js r128 offline) | **PLANNED** | Night race with floodlights, procedural asphalt ribbon, red/white kerbs, single checkered line, 5-light start gantry, low-poly procedural F1 cars, 6 camera modes. |
+| **Phase 3** | Playback & HUD (Timing Tower, Grid Config, Manual Start) | **PLANNED** | Manual lights out button, grid position selector, timing tower with persistent timestamps, HUD telemetry with labelled $K$, responsive layout, drag-and-drop. |
+| **Phase 4** | Deterministic Video & Media Capture (`video3d`) | **PLANNED** | Frame-by-frame capture script, 20s hero GIF (<10MB), race video, screenshots on showcase seeds 3000-3019, frame time benchmark. |
+| **Phase 5** | Repository & README Update | **PLANNED** | Updated README with hero GIF, 3D viewer docs, GitHub Pages deployment guide, vendor MIT license, unit tests. |
+
+---
+
 ## Detailed Log
 
 ### Phase 0: Discovery & Safety Auditing
@@ -69,3 +82,20 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
   - Generated hero video: `videos/f1_showcase_3003.mp4` (9.69 MB, < 25 MB).
   - Generated showcase GIF: `videos/f1_showcase_3003.gif` (1.14 MB, < 5 MB).
   - Generated compressed replay telemetry: `data/telemetry_latest.json.gz` (295 KB).
+
+### 3D Viewer Phase 0: Discovery
+- [x] Audited running python processes (no training/evaluation in flight).
+- [x] Created and switched to branch `viewer-3d`.
+- [x] Inspected CarRacing source constants:
+  - `SCALE = 6.0` (pixels per world unit in 2D rendering)
+  - `TRACK_WIDTH = 40 / SCALE = 6.6667`
+  - Road half-width = `TRACK_WIDTH / 2 = 3.3333` (Total road width = 13.333)
+  - `PLAYFIELD = 2000 / SCALE = 333.3333`
+  - `FPS = 50`
+  - Car hull bounds: Length = 5.00 world units, Width = 2.40 world units
+  - Car wheels: Radius = 0.54, Width = 0.56, Wheelbase = 3.24, Track = 2.20 world units.
+- [x] Identified user feedback:
+  1. Fix timing tower click resetting video playback time.
+  2. Add manual lights-out start (5-light gantry sequence).
+  3. Expand to 6 cars with configurable starting grid order and positions.
+  4. Real dynamic physics and varied behavior across all cars.
