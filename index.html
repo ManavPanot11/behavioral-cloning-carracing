@@ -937,12 +937,14 @@
       const isPaused = video.paused;
 
       currentMode = mode;
-      video.src = videoSources[mode] || videoSources['broadcast'];
-      video.currentTime = currentTime;
-
-      if (!isPaused) {
-        video.play().catch(e => console.log('Autoplay handled:', e));
-      }
+      const targetSrc = videoSources[mode] || videoSources['broadcast'];
+      video.src = targetSrc;
+      video.addEventListener('loadedmetadata', () => {
+        video.currentTime = Math.min(currentTime, video.duration || currentTime);
+        if (!isPaused) {
+          video.play().catch(e => console.log('Autoplay handled:', e));
+        }
+      }, { once: true });
 
       // Update UI selection
       document.querySelectorAll('.driver-row').forEach(row => {

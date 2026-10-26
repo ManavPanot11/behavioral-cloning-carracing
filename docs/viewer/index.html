@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Autonomous Grand Prix — 3D Replay Viewer</title>
+  
+  <!-- Local OFL Fonts -->
+  <style>
+    @font-face {
+      font-family: 'BigShoulders';
+      src: url('fonts/BigShoulders-Bold.ttf') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'BigShoulders';
+      src: url('fonts/BigShoulders-Regular.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+    }
+
+    :root {
+      --bg-base: #060810;
+      --bg-surface: #0e121c;
+      --bg-card: rgba(16, 22, 34, 0.85);
+      --bg-card-hover: rgba(24, 32, 50, 0.95);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-active: rgba(0, 229, 255, 0.6);
+      
+      --f1-red: #ff1744;
+      --f1-cyan: #00e5ff;
+      --f1-gold: #ffd600;
+      --f1-green: #00e676;
+      --f1-purple: #b026ff;
+      
+      --text-main: #f0f2f8;
+      --text-muted: #8a92a5;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navigation Header */
+    header {
+      background: rgba(10, 14, 22, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      height: 52px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .badge-3d {
+      background: linear-gradient(135deg, var(--f1-red) 0%, #b30022 100%);
+      color: white;
+      font-family: 'BigShoulders', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 2px 10px;
+      border-radius: 4px;
+    }
+
+    .brand-title {
+      font-family: 'BigShoulders', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+    }
+
+    .disclaimer-pill {
+      background: rgba(255, 214, 0, 0.12);
+      border: 1px solid rgba(255, 214, 0, 0.4);
+      color: var(--f1-gold);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      text-transform: uppercase;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    select, button {
+      background: rgba(24, 32, 48, 0.8);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    select:hover, button:hover {
+      background: rgba(36, 48, 72, 0.9);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--f1-cyan) 0%, #0091ea 100%);
+      color: #041018;
+      font-weight: 700;
+      border: none;
+    }
+    .btn-primary:hover {
+      filter: brightness(1.15);
+    }
+
+    /* Main Viewport Workspace */
+    .workspace {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      height: calc(100vh - 52px);
+    }
+
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* HUD Overlay Layer */
+    .hud-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      padding: 16px;
+    }
+
+    .hud-col {
+      pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: calc(100vh - 140px);
+    }
+
+    .hud-col-left {
+      width: 280px;
+    }
+
+    .hud-col-right {
+      width: 290px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .card-title {
+      font-family: 'BigShoulders', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* F1 Timing Tower */
+    .driver-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .driver-row {
+      display: flex;
+      align-items: center;
+      background: rgba(14, 18, 28, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .driver-row:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .driver-row.active {
+      background: rgba(0, 229, 255, 0.12);
+      border-color: var(--border-active);
+    }
+
+    .driver-pos {
+      font-family: 'BigShoulders', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      width: 22px;
+      color: var(--text-muted);
+    }
+
+    .driver-stripe {
+      width: 4px;
+      height: 24px;
+      border-radius: 2px;
+      margin: 0 8px;
+    }
+
+    .driver-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .driver-code {
+      font-family: 'BigShoulders', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      line-height: 1.0;
+    }
+
+    .driver-name-sub {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+
+    .driver-gap {
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Camera Switcher Grid */
+    .cam-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .cam-btn {
+      font-size: 0.75rem;
+      padding: 6px;
+      text-align: center;
+    }
+
+    .cam-btn.active {
+      background: var(--f1-cyan);
+      color: #05101a;
+      font-weight: 700;
+      border-color: var(--f1-cyan);
+    }
+
+    /* Telemetry HUD */
+    .telemetry-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 0.8rem;
+    }
+
+    .telemetry-val {
+      font-family: 'BigShoulders', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+    }
+
+    .meter-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .meter-fill {
+      height: 100%;
+      width: 0%;
+      transition: width 0.08s linear;
+    }
+
+    .fill-speed { background: linear-gradient(90deg, #00e5ff, #00b0ff); }
+    .fill-gas { background: linear-gradient(90deg, #00e676, #00c853); }
+    .fill-brake { background: linear-gradient(90deg, #ff1744, #d50000); }
+    .fill-steer { background: linear-gradient(90deg, #ffd600, #ffab00); }
+
+    /* 4-Wheel Track Limit Indicators */
+    .wheels-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .wheel-card {
+      background: rgba(12, 16, 26, 0.7);
+      padding: 6px;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .wheel-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #444;
+      transition: background 0.1s ease;
+    }
+    .wheel-dot.on-track { background: var(--f1-green); box-shadow: 0 0 6px var(--f1-green); }
+    .wheel-dot.off-track { background: var(--f1-red); box-shadow: 0 0 6px var(--f1-red); }
+
+    /* Minimap */
+    #minimap-canvas {
+      width: 100%;
+      height: 160px;
+      border-radius: 6px;
+      display: block;
+      background: #080c14;
+    }
+
+    /* Race Control Notice Banner */
+    #race-control-banner {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(16, 20, 30, 0.92);
+      border: 1px solid var(--f1-gold);
+      border-radius: 6px;
+      padding: 8px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 50;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+      transition: opacity 0.3s ease;
+    }
+    #race-control-banner.hidden { opacity: 0; pointer-events: none; }
+
+    .rc-badge {
+      background: var(--f1-gold);
+      color: #121000;
+      font-family: 'BigShoulders', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+
+    /* Start Gantry Modal Overlay */
+    #start-gantry-overlay {
+      position: absolute;
+      top: 24%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(12, 16, 24, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 14px;
+      padding: 24px 36px;
+      z-index: 80;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+    }
+    #start-gantry-overlay.hidden { display: none; }
+
+    .gantry-lights-box {
+      background: #080a0f;
+      border: 2px solid #222a3a;
+      border-radius: 8px;
+      padding: 12px 20px;
+      display: flex;
+      gap: 16px;
+    }
+
+    .gantry-lamp {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #220000;
+      border: 2px solid #3a0000;
+      transition: all 0.1s ease;
+    }
+    .gantry-lamp.active {
+      background: #ff1744;
+      border-color: #ff5252;
+      box-shadow: 0 0 18px #ff1744;
+    }
+    .gantry-lamp.out {
+      background: #111111;
+      border-color: #222222;
+      box-shadow: none;
+    }
+
+    .btn-start-race {
+      background: linear-gradient(135deg, var(--f1-red) 0%, #d50000 100%);
+      color: white;
+      font-family: 'BigShoulders', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 10px 32px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(255, 23, 68, 0.4);
+      transition: all 0.15s ease;
+    }
+    .btn-start-race:hover {
+      transform: scale(1.04);
+      filter: brightness(1.15);
+    }
+
+    /* Bottom Playback Control Bar */
+    .bottom-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 64px;
+      background: rgba(10, 14, 22, 0.95);
+      border-top: 1px solid var(--border-color);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      backdrop-filter: blur(12px);
+    }
+
+    .timeline-group {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      max-width: 900px;
+      margin: 0 24px;
+    }
+
+    #time-scrubber {
+      flex: 1;
+      accent-color: var(--f1-cyan);
+      height: 5px;
+      cursor: pointer;
+    }
+
+    .time-readout {
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      width: 105px;
+    }
+
+    .speed-pills {
+      display: flex;
+      gap: 4px;
+    }
+
+    .speed-btn {
+      font-size: 0.75rem;
+      padding: 4px 8px;
+    }
+    .speed-btn.active {
+      background: var(--f1-cyan);
+      color: #05101a;
+      font-weight: 700;
+    }
+
+    /* Modal Overlays (About & Grid) */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+    }
+    .modal-overlay.hidden { display: none; }
+
+    .modal-card {
+      background: #101522;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      width: 520px;
+      max-width: 90vw;
+      padding: 24px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8);
+    }
+
+    .grid-slot-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(20, 26, 40, 0.7);
+      padding: 8px 14px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+    }
+
+    .slot-badge {
+      font-family: 'BigShoulders', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--f1-gold);
+      width: 24px;
+    }
+
+    .slot-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .slot-code {
+      font-family: 'BigShoulders', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      width: 45px;
+    }
+
+    .slot-name {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Responsive Rules */
+    @media (max-width: 1100px) {
+      .hud-col-right { display: none; }
+      .hud-col-left { width: 240px; }
+    }
+  </style>
+
+  <!-- Pinned Offline Three.js r128 UMD -->
+  <script src="vendor/three.min.js"></script>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="brand-group">
+      <div class="badge-3d">F1 3D</div>
+      <div class="brand-title">AUTONOMOUS GRAND PRIX</div>
+      <div class="disclaimer-pill">3D VISUALISATION · SIM PHYSICS IS 2D</div>
+    </div>
+    <div class="header-actions">
+      <select id="replay-select">
+        <option value="data/race_3003.json">Showcase Grand Prix — Seed 3003 (6 Cars)</option>
+      </select>
+      <button id="btn-grid-config">🚦 Grid Order</button>
+      <button onclick="document.getElementById('about-modal').classList.remove('hidden')">ℹ️ About / Keys (H)</button>
+    </div>
+  </header>
+
+  <!-- Main Viewport Workspace -->
+  <main class="workspace">
+    <div id="canvas-container"></div>
+
+    <!-- HUD Overlay Layer -->
+    <div class="hud-layer">
+      
+      <!-- Left Column: F1 Timing Tower & Cameras -->
+      <div class="hud-col hud-col-left">
+        <div class="card">
+          <div class="card-title">
+            <span>TIMING TOWER</span>
+            <span style="font-size: 0.75rem; color: var(--f1-cyan);">LIVE</span>
+          </div>
+          <div class="driver-list" id="driver-tower">
+            <!-- Populated dynamically; clicking car switches view without restarting -->
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">CAMERA FEEDS (KEYS 1-6)</div>
+          <div class="cam-grid">
+            <button class="cam-btn active" data-mode="1">[1] Chase</button>
+            <button class="cam-btn" data-mode="2">[2] Onboard</button>
+            <button class="cam-btn" data-mode="3">[3] TV Heli</button>
+            <button class="cam-btn" data-mode="4">[4] Top-Down</button>
+            <button class="cam-btn" data-mode="5">[5] Trackside</button>
+            <button class="cam-btn" data-mode="6">[6] Free Orbit</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Telemetry & Minimap -->
+      <div class="hud-col hud-col-right">
+        <div class="card">
+          <div class="card-title">
+            <span>CAR TELEMETRY</span>
+            <span id="telemetry-lap" style="font-size: 0.75rem; color: var(--f1-gold);">LAP 1/2</span>
+          </div>
+
+          <div class="telemetry-row">
+            <span style="color: var(--text-muted);">Speed (3.6 * v):</span>
+            <div><span class="telemetry-val" id="telemetry-speed">0</span> <span style="font-size: 0.75rem;">KM/H</span></div>
+          </div>
+          <div class="meter-bar"><div class="meter-fill fill-speed" id="bar-speed"></div></div>
+
+          <div class="telemetry-row">
+            <span style="color: var(--text-muted);">Throttle:</span>
+            <span class="telemetry-val" id="telemetry-gas">0%</span>
+          </div>
+          <div class="meter-bar"><div class="meter-fill fill-gas" id="bar-gas"></div></div>
+
+          <div class="telemetry-row">
+            <span style="color: var(--text-muted);">Brake:</span>
+            <span class="telemetry-val" id="telemetry-brake">0%</span>
+          </div>
+          <div class="meter-bar"><div class="meter-fill fill-brake" id="bar-brake"></div></div>
+
+          <div class="telemetry-row">
+            <span style="color: var(--text-muted);">Steering:</span>
+            <span class="telemetry-val" id="telemetry-steer">0.00</span>
+          </div>
+          <div class="meter-bar"><div class="meter-fill fill-steer" id="bar-steer"></div></div>
+
+          <div class="telemetry-row">
+            <span style="color: var(--text-muted);">Track Progress:</span>
+            <span class="telemetry-val" id="telemetry-progress">0.0%</span>
+          </div>
+          <div class="meter-bar"><div class="meter-fill fill-speed" id="bar-progress"></div></div>
+
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; margin-top: 8px; margin-bottom: 4px;">
+            WHEEL TRACK LIMITS
+          </div>
+          <div class="wheels-grid">
+            <div class="wheel-card"><span class="wheel-dot on-track" id="wheel-fl"></span> FL</div>
+            <div class="wheel-card"><span class="wheel-dot on-track" id="wheel-fr"></span> FR</div>
+            <div class="wheel-card"><span class="wheel-dot on-track" id="wheel-rl"></span> RL</div>
+            <div class="wheel-card"><span class="wheel-dot on-track" id="wheel-rr"></span> RR</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">CIRCUIT MINIMAP</div>
+          <canvas id="minimap-canvas" width="260" height="160"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Race Control Notice Banner -->
+    <div id="race-control-banner" class="hidden">
+      <span class="rc-badge">RACE CONTROL</span>
+      <span id="rc-text">LIGHTS OUT AND AWAY WE GO!</span>
+    </div>
+
+    <!-- Overhead Start Gantry Modal Overlay -->
+    <div id="start-gantry-overlay">
+      <div style="font-family: 'BigShoulders', sans-serif; font-size: 1.25rem; font-weight: 700; color: var(--text-muted);">
+        FIA FORMULA 1 STARTING PROCEDURE
+      </div>
+      <div class="gantry-lights-box">
+        <div class="gantry-lamp" id="lamp-1"></div>
+        <div class="gantry-lamp" id="lamp-2"></div>
+        <div class="gantry-lamp" id="lamp-3"></div>
+        <div class="gantry-lamp" id="lamp-4"></div>
+        <div class="gantry-lamp" id="lamp-5"></div>
+      </div>
+      <div id="gantry-status-text" style="font-size: 0.85rem; color: var(--f1-gold); font-weight: 600;">
+        CARS STATIONARY ON GRID · CLICK TO START
+      </div>
+      <button class="btn-start-race" id="btn-start-race">START RACE (SPACE)</button>
+    </div>
+  </main>
+
+  <!-- Bottom Playback Control Bar -->
+  <footer class="bottom-bar">
+    <button class="btn-primary" id="btn-play-pause">▶️ Play</button>
+
+    <div class="timeline-group">
+      <input type="range" id="time-scrubber" min="0" max="100" value="0" step="0.1">
+      <span class="time-readout" id="current-time">00:00 / 00:00</span>
+    </div>
+
+    <div class="speed-pills">
+      <button class="speed-btn" data-speed="0.25">0.25x</button>
+      <button class="speed-btn" data-speed="0.5">0.5x</button>
+      <button class="speed-btn active" data-speed="1.0">1x</button>
+      <button class="speed-btn" data-speed="2.0">2x</button>
+      <button class="speed-btn" data-speed="4.0">4x</button>
+    </div>
+  </footer>
+
+  <!-- Grid Configuration Modal -->
+  <div class="modal-overlay hidden" id="grid-modal">
+    <div class="modal-card">
+      <h2 style="font-family: 'BigShoulders', sans-serif; font-size: 1.6rem; margin-bottom: 14px;">
+        STARTING GRID ORDER (6 CARS)
+      </h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+        Staggered starting positions behind waypoint 0. Drag & drop or reassign starting positions:
+      </p>
+      <div id="grid-slots-container"></div>
+      <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+        <button class="btn-primary" id="btn-close-grid">Close Grid</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- About & Keyboard Shortcuts Modal (H) -->
+  <div class="modal-overlay hidden" id="about-modal">
+    <div class="modal-card">
+      <h2 style="font-family: 'BigShoulders', sans-serif; font-size: 1.6rem; margin-bottom: 10px;">
+        ABOUT 3D REPLAY VIEWER
+      </h2>
+      <p style="font-size: 0.85rem; color: #b8c0d6; line-height: 1.5; margin-bottom: 14px;">
+        <strong>Physics Integrity:</strong> The simulation physics operates strictly in 2D Box2D (Gymnasium CarRacing-v3). 
+        All positions, speeds, steering angles, throttle, brake, and wheel track limits come directly from the recorded physics telemetry.
+        3D body pitch and roll are cosmetic enhancements driven by longitudinal and lateral acceleration.
+      </p>
+      <h3 style="font-family: 'BigShoulders', sans-serif; font-size: 1.2rem; margin-bottom: 8px;">KEYBOARD SHORTCUTS</h3>
+      <ul style="font-size: 0.82rem; color: var(--text-muted); list-style: none; display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px;">
+        <li><strong style="color: white;">[1 - 6]</strong> : Switch Camera Modes (Chase, Onboard, TV Heli, Top-Down, Trackside, Free Orbit)</li>
+        <li><strong style="color: white;">[SPACE]</strong> : Start Race / Play / Pause</li>
+        <li><strong style="color: white;">[F]</strong> : Fullscreen Toggle</li>
+        <li><strong style="color: white;">[H]</strong> : Toggle this Help Modal</li>
+      </ul>
+      <div style="font-size: 0.75rem; color: #707a90; border-top: 1px solid var(--border-color); padding-top: 10px;">
+        Unofficial F1-inspired telemetry viewer. Fonts: Big Shoulders (SIL Open Font License 1.1). Three.js (MIT License).
+      </div>
+      <div style="display: flex; justify-content: flex-end; margin-top: 14px;">
+        <button class="btn-primary" onclick="document.getElementById('about-modal').classList.add('hidden')">Got It</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Entry Point -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
