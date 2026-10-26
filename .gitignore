@@ -35,6 +35,7 @@ scratch_*
 # Archive zips and model zip folders
 *.zip
 rc/
+assets/private/
 
 # IDE & OS files
 .idea/

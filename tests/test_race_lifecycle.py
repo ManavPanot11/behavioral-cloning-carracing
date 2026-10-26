@@ -170,14 +170,16 @@ def test_lapped_cars_finish_on_crossing_after_winner():
     tracker_b = mcw.trackers["car_vel"]
     tracker_b._prev_tile = int(tracker_b.track_geom.num_tiles * 0.90)
     tracker_b.current_tile = int(tracker_b.track_geom.num_tiles * 0.05)
+    tracker_b.passed_halfway = True
     tracker_b.has_started = True
+    t0 = mcw.track_pts[0]
+    mcw.cars["car_vel"].hull.position = (float(t0[0]), float(t0[1]))
 
     # Call step with lap_finished simulated
-    mcw.timing.update_driver_progress("car_vel", current_step=2150, progress_pct=10.0, lap_finished=True)
     mcw.step()
 
     assert "car_vel" in mcw.finished_cars, "Lapped car was not flagged finished after winner"
-    assert mcw.session_end_step == 2150 + 750
+    assert mcw.session_end_step == mcw.last_finisher_step + 750
     mcw.close()
 
 

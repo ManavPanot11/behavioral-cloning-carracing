@@ -232,3 +232,42 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
   - Session cooldown countdown banner (`SESSION ENDS IN 00:xx`).
   - Contact markers plotted on timeline scrubber with click-to-seek functionality.
   - Cosmetic collision sparks particle emitter in 3D scene and camera shake impulse.
+
+### Shared-World Engine Phase 5: Custom 3D Models, Calibration & CustomTrackEnv
+- [x] Offline Three.js GLTFLoader Vendoring:
+  - Vendored official Three.js r128 non-module UMD `GLTFLoader.js` (96.5 KB) in `docs/viewer/vendor/GLTFLoader.js` (zero CDN dependencies at runtime).
+  - Verified MIT license in `docs/viewer/vendor/LICENSE`.
+  - Added `<script src="vendor/GLTFLoader.js"></script>` to `docs/viewer/index.html`.
+- [x] Custom Car Models from `E:\car\rc`:
+  - Extracted 6 3D models into `assets/private/cars/<name>/` with license files preserved:
+    - `ferrari_296`: Ferrari 296 Challenge
+    - `aston_martin_f1`: Aston Martin F1 AMR23
+    - `f1_senna_1991`: McLaren MP4/6 Senna 1991
+    - `porsche_992_gt3_rs`: Porsche 992 GT3 RS
+    - `porsche_992_gt3_r_rexy`: Porsche 992 GT3 R Rexy
+    - `racecar_rc09`: RaceCar RC-09
+  - Generated `car.json` for all 6 models with schema (`file`, `scale`, `up`, `forward`, `offset`, `wheel_nodes`, `steering_pivots`, `tint_materials`, `brake_light_material`, `physics_footprint`).
+  - Physics footprint strictly locked to Gymnasium CarRacing-v3 hull dimensions (5.0m length × 2.4m width). Physics is never altered to match visual models.
+  - Added `assets/private/` to `.gitignore` to protect private model assets.
+- [x] WebGL 3D Model Loader & Interactive Calibration Mode:
+  - Implemented `F1Car.loadCustomModel()` in `docs/viewer/js/car_model.js`:
+    - Validates config on load.
+    - If model fails to load, logs `console.warn` and falls back cleanly to procedural F1 car without crashes.
+    - Automatically tints team livery materials and applies emissive glow on braking.
+    - Animates front wheel steering and 4-wheel rotation on custom nodes.
+  - Added Calibration UI (`#calibration-modal`, shortcut `C` or `🔧 Calibrate` button):
+    - Real-time wireframe overlay of Box2D physics hull (5.0m × 2.4m × 1.0m box) and 4 wheel contact patches (±1.15m, ±1.62m).
+    - Interactive sliders for scale, offset X/Y/Z, and yaw/pitch rotation.
+    - Live `car.json` preview with one-click clipboard copy.
+- [x] Custom Track Environment (`f1sim/custom_track.py`):
+  - `CustomTrackEnv`: Gymnasium-compatible CarRacing environment utilizing custom geometry from `track.json` or glTF polyline ("centerline"/"startline") with labelled experimental auto-extraction fallback.
+  - Strictly adheres to installed Gymnasium CarRacing constants: uses `TRACK_WIDTH` (`40 / 6.0 = 6.6667m`), Box2D polygon fixtures, sensors, and road tile coloring.
+  - Lap length and expected lap time calculation with automatic warning if expected lap time > 3 minutes (180s).
+  - Circuit validation: Scripted expert finishes full lap with >85% track coverage and reward >900.
+  - Honest model evaluation suite: Evaluates trained models without retraining or modifying weights.
+  - Corner radii distribution analysis: Compares custom track curvature against 50 procedural CarRacing tracks.
+  - Alignment debug check: Measures max lateral deviation between physics centerline and 3D road points.
+  - Horizontal mirror symmetry test: Verifies simulation stability and physics symmetry under mirror transformations.
+- [x] Verification Suite (`tests/test_custom_models_and_track.py`):
+  - 9/9 unit tests passing: GLTFLoader vendor check, car.json schemas & 5.0m×2.4m footprint, track loader, lap time warning, CustomTrackEnv fixtures, expert finish, 50-track radii, alignment check, and mirror test.
+

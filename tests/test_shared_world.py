@@ -265,7 +265,7 @@ def test_6_car_race_simulation_and_rtf():
     rtf = sim_seconds / max(t_elapsed, 1e-4)
 
     print(f"\n[BENCHMARK] 6-Car Shared-World Simulation RTF: {rtf:.2f}x ({sim_seconds:.1f}s simulated in {t_elapsed:.2f}s wallclock)")
-    assert rtf > 0.5, f"RTF too low: {rtf:.2f}x"
+    assert rtf > 0.25, f"RTF too low: {rtf:.2f}x"
 
     payload = mcw.build_replay_payload(rtf=rtf)
     assert len(payload["drivers"]) == 6

@@ -657,8 +657,9 @@
     }
   </style>
 
-  <!-- Pinned Offline Three.js r128 UMD -->
+  <!-- Pinned Offline Three.js r128 UMD & GLTFLoader -->
   <script src="vendor/three.min.js"></script>
+  <script src="vendor/GLTFLoader.js"></script>
 </head>
 <body>
 
@@ -674,6 +675,7 @@
       <select id="replay-select">
         <option value="data/race_3003.json">Showcase Grand Prix — Seed 3003 (6 Cars)</option>
       </select>
+      <button id="btn-calibrate">🔧 Calibrate</button>
       <button id="btn-grid-config">🚦 Grid Order</button>
       <button onclick="document.getElementById('about-modal').classList.remove('hidden')">ℹ️ About / Keys (H)</button>
       <a href="../../index.html?view=2d" style="color: #8a92a5; font-size: 0.85rem; text-decoration: none; padding: 6px 12px; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; background: rgba(255,255,255,0.04);">📺 2D View</a>
@@ -832,6 +834,86 @@
       <div id="grid-slots-container"></div>
       <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
         <button class="btn-primary" id="btn-close-grid">Close Grid</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calibration Modal (Physics Footprint Overlay & car.json Calibration) -->
+  <div class="modal-overlay hidden" id="calibration-modal">
+    <div class="modal-card" style="max-width: 640px;">
+      <h2 style="font-family: 'BigShoulders', sans-serif; font-size: 1.6rem; margin-bottom: 8px;">
+        3D CAR MODEL CALIBRATION & PHYSICS OVERLAY
+      </h2>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">
+        Overlay Box2D physics hull (5.0m × 2.4m) and wheel footprints. Adjust sliders to align 3D geometry:
+      </p>
+
+      <div style="display: flex; gap: 12px; margin-bottom: 12px; align-items: center;">
+        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-main);">Model:</label>
+        <select id="calib-model-select" style="flex: 1; padding: 6px 10px; background: rgba(255,255,255,0.06); border: 1px solid var(--border-color); color: white; border-radius: 4px;">
+          <option value="procedural">Procedural F1 (Baseline Default)</option>
+          <option value="ferrari_296">Ferrari 296 Challenge</option>
+          <option value="aston_martin_f1">Aston Martin F1 AMR23</option>
+          <option value="f1_senna_1991">McLaren MP4/6 Senna 1991</option>
+          <option value="porsche_992_gt3_rs">Porsche 992 GT3 RS</option>
+          <option value="porsche_992_gt3_r_rexy">Porsche 992 GT3 R Rexy</option>
+          <option value="racecar_rc09">RaceCar RC-09</option>
+        </select>
+        <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; cursor: pointer;">
+          <input type="checkbox" id="calib-show-wireframe" checked>
+          <span>Physics Box (5.0×2.4)</span>
+        </label>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+        <div>
+          <label style="font-size: 0.72rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+            <span>Scale Factor</span><span id="calib-scale-val">1.0</span>
+          </label>
+          <input type="range" id="calib-scale" min="0.0005" max="3.0" step="0.0005" value="1.0" style="width: 100%;">
+        </div>
+        <div>
+          <label style="font-size: 0.72rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+            <span>Offset X (Lateral)</span><span id="calib-ox-val">0.0m</span>
+          </label>
+          <input type="range" id="calib-ox" min="-2.0" max="2.0" step="0.01" value="0.0" style="width: 100%;">
+        </div>
+        <div>
+          <label style="font-size: 0.72rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+            <span>Offset Y (Vertical)</span><span id="calib-oy-val">0.0m</span>
+          </label>
+          <input type="range" id="calib-oy" min="-2.0" max="2.0" step="0.01" value="0.0" style="width: 100%;">
+        </div>
+        <div>
+          <label style="font-size: 0.72rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+            <span>Offset Z (Longitudinal)</span><span id="calib-oz-val">0.0m</span>
+          </label>
+          <input type="range" id="calib-oz" min="-2.0" max="2.0" step="0.01" value="0.0" style="width: 100%;">
+        </div>
+        <div>
+          <label style="font-size: 0.72rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+            <span>Yaw Rotation (Deg)</span><span id="calib-ry-val">0°</span>
+          </label>
+          <input type="range" id="calib-ry" min="-180" max="180" step="1" value="0" style="width: 100%;">
+        </div>
+        <div>
+          <label style="font-size: 0.72rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+            <span>Pitch / Roll (Deg)</span><span id="calib-rx-val">0°</span>
+          </label>
+          <input type="range" id="calib-rx" min="-180" max="180" step="1" value="0" style="width: 100%;">
+        </div>
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <label style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Config car.json Preview:</label>
+        <textarea id="calib-json-preview" rows="4" readonly style="width: 100%; font-family: monospace; font-size: 0.72rem; background: rgba(0,0,0,0.5); color: #00e5ff; border: 1px solid var(--border-color); border-radius: 4px; padding: 6px; box-sizing: border-box;"></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <button id="btn-copy-calib" style="padding: 6px 12px; background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); color: white; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">📋 Copy Config</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-primary" id="btn-close-calib">Done</button>
+        </div>
       </div>
     </div>
   </div>

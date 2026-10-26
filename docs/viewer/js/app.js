@@ -117,6 +117,9 @@ class ReplayApp {
         }
       } else if (key === 'H') {
         this.toggleAboutModal();
+      } else if (key === 'C') {
+        const calibModal = document.getElementById('calibration-modal');
+        if (calibModal) calibModal.classList.toggle('hidden');
       }
     });
 
@@ -191,6 +194,113 @@ class ReplayApp {
         reader.readAsText(file);
       }
     });
+
+    this.setupCalibrationControls();
+  }
+
+  setupCalibrationControls() {
+    const modal = document.getElementById('calibration-modal');
+    const btnOpen = document.getElementById('btn-calibrate');
+    const btnClose = document.getElementById('btn-close-calib');
+    const modelSelect = document.getElementById('calib-model-select');
+    const showWireframe = document.getElementById('calib-show-wireframe');
+    const scaleSlider = document.getElementById('calib-scale');
+    const oxSlider = document.getElementById('calib-ox');
+    const oySlider = document.getElementById('calib-oy');
+    const ozSlider = document.getElementById('calib-oz');
+    const rySlider = document.getElementById('calib-ry');
+    const rxSlider = document.getElementById('calib-rx');
+    const preview = document.getElementById('calib-json-preview');
+    const btnCopy = document.getElementById('btn-copy-calib');
+
+    if (btnOpen) {
+      btnOpen.addEventListener('click', () => {
+        modal.classList.remove('hidden');
+        onValChange();
+      });
+    }
+    if (btnClose) {
+      btnClose.addEventListener('click', () => {
+        modal.classList.add('hidden');
+      });
+    }
+
+    const onValChange = () => {
+      if (!scaleSlider) return;
+      document.getElementById('calib-scale-val').innerText = scaleSlider.value;
+      document.getElementById('calib-ox-val').innerText = oxSlider.value + 'm';
+      document.getElementById('calib-oy-val').innerText = oySlider.value + 'm';
+      document.getElementById('calib-oz-val').innerText = ozSlider.value + 'm';
+      document.getElementById('calib-ry-val').innerText = rySlider.value + '°';
+      document.getElementById('calib-rx-val').innerText = rxSlider.value + '°';
+
+      const calib = {
+        scale: parseFloat(scaleSlider.value),
+        offsetX: parseFloat(oxSlider.value),
+        offsetY: parseFloat(oySlider.value),
+        offsetZ: parseFloat(ozSlider.value),
+        rotY: parseFloat(rySlider.value),
+        rotX: parseFloat(rxSlider.value),
+      };
+
+      const targetCar = this.focusedCarId ? this.cars[this.focusedCarId] : Object.values(this.cars)[0];
+      if (targetCar && typeof targetCar.applyCalibration === 'function') {
+        targetCar.applyCalibration(calib);
+      }
+
+      if (preview) {
+        preview.value = JSON.stringify(
+          {
+            model: modelSelect ? modelSelect.value : 'procedural',
+            scale: parseFloat(scaleSlider.value),
+            offset: [parseFloat(oxSlider.value), parseFloat(oySlider.value), parseFloat(ozSlider.value)],
+            rot_y_deg: parseFloat(rySlider.value),
+            rot_x_deg: parseFloat(rxSlider.value),
+          },
+          null,
+          2
+        );
+      }
+    };
+
+    [scaleSlider, oxSlider, oySlider, ozSlider, rySlider, rxSlider].forEach((s) => {
+      if (s) s.addEventListener('input', onValChange);
+    });
+
+    if (showWireframe) {
+      showWireframe.addEventListener('change', (e) => {
+        Object.values(this.cars).forEach((car) => {
+          if (typeof car.togglePhysicsWireframe === 'function') {
+            car.togglePhysicsWireframe(e.target.checked);
+          }
+        });
+      });
+    }
+
+    if (modelSelect) {
+      modelSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        const targetCar = this.focusedCarId ? this.cars[this.focusedCarId] : Object.values(this.cars)[0];
+        if (targetCar && typeof targetCar.loadCustomModel === 'function') {
+          targetCar.loadCustomModel(val);
+          if (val === 'aston_martin_f1') scaleSlider.value = 0.001;
+          else if (val === 'f1_senna_1991') scaleSlider.value = 0.117;
+          else if (val === 'racecar_rc09') scaleSlider.value = 0.55;
+          else scaleSlider.value = 1.0;
+          onValChange();
+        }
+      });
+    }
+
+    if (btnCopy) {
+      btnCopy.addEventListener('click', () => {
+        if (preview) {
+          navigator.clipboard.writeText(preview.value);
+          btnCopy.innerText = '✅ Copied!';
+          setTimeout(() => (btnCopy.innerText = '📋 Copy Config'), 2000);
+        }
+      });
+    }
   }
 
   initReplayMode() {
