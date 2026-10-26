@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Autonomous Grand Prix — 10-Lap Multi-Car Race Viewer</title>
+  
+  <!-- Auto-redirect to 3D WebGL Viewer unless ?view=2d is explicitly set -->
+  <script>
+    if (!window.location.search.includes('view=2d')) {
+      window.location.replace('docs/viewer/');
+    }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet">
@@ -635,6 +643,9 @@
       </div>
     </div>
     <div class="header-pills">
+      <a href="docs/viewer/" class="badge-pill" style="border-color: rgba(0, 229, 255, 0.6); color: #00e5ff; text-decoration: none; font-weight: 700; background: rgba(0, 229, 255, 0.1);">
+        🏎️ 3D WEBGL VIEWER
+      </a>
       <div class="badge-pill">
         <span class="live-dot"></span>
         <span id="header-status">10 LAPS LIVE</span>
