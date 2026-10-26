@@ -28,7 +28,7 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
 - [x] Checked `logs/experiment.log`: Experiment completed previously (`ALL DONE in 93.8 minutes`).
 - [x] Created git tag `v0-before-f1` and created/switched to branch `f1-premium`.
 - [x] Audited tracked files over 50 MB: **0 files over 50 MB**.
-- [x] LICENSE audit: **No LICENSE file found**. Proposing MIT License to user.
+- [x] LICENSE audit: Added MIT License in LICENSE (committed in `b7bc5ba`).
 - [x] Documented existing UI code: `index.html` (34.5 KB) and `race_viewer.html` (34.5 KB) web app, `race_multicar.py` simulator.
 
 ### Phase 1: Reliability
