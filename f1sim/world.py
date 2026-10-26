@@ -199,6 +199,12 @@ class MultiCarWorld:
         # Previous states for yaw-rate & acceleration calculation
         self._prev_heading: Dict[str, float] = {}
 
+        # Phase 3: Lifecycle and classification tracking
+        self.finished_cars = set()
+        self._lapped_announced = set()
+        self.stopped_frames = {spec["id"]: 0 for spec in self.specs}
+        self.timeout_seconds = 120.0
+
         self._init_simulation()
 
     def _init_simulation(self):
@@ -467,12 +473,16 @@ class MultiCarWorld:
             # Lateral acceleration: speed * |yaw_rate| / 9.81 (estimated G)
             lat_g = round(float((speed * abs(ang_vel)) / 9.81), 2)
 
-            # Record finish timestamps
-            if timing_driver.laps_completed >= self.total_laps:
-                classified_finishers.append(cid)
+            # Record finish timestamps: winner or lapped car crossing finish line
+            is_winner_crossing = (timing_driver.laps_completed >= self.total_laps) and (self.winner_id is None)
+            is_lapped_finish = (self.winner_id is not None) and lap_finished and (cid not in self.finished_cars)
+
+            if is_winner_crossing or is_lapped_finish or (timing_driver.laps_completed >= self.total_laps and cid not in self.finished_cars):
+                self.finished_cars.add(cid)
                 if self.winner_id is None:
                     self.winner_id = cid
                     self.winner_finish_step = step
+                    self.race_state = "CHEQUERED"
                     self.race_events.append({
                         "step": step,
                         "time": round(step / self.fps, 2),
@@ -480,6 +490,34 @@ class MultiCarWorld:
                         "text": f"CHEQUERED FLAG: {timing_driver.code} WINS THE GRAND PRIX!",
                         "car_id": cid,
                     })
+                elif is_lapped_finish and cid not in self._lapped_announced:
+                    self._lapped_announced.add(cid)
+                    laps_down = max(1, self.total_laps - timing_driver.laps_completed)
+                    lap_str = f"+{laps_down} LAP{'S' if laps_down > 1 else ''}"
+                    self.race_events.append({
+                        "step": step,
+                        "time": round(step / self.fps, 2),
+                        "type": "chequered_flag",
+                        "text": f"CHEQUERED FLAG: {timing_driver.code} FINISHES ({lap_str})",
+                        "car_id": cid,
+                    })
+
+            # Stopped car on track check (>500 frames / 10s at speed < 0.2 m/s triggers DNF)
+            if not is_pre_start and not has_finished and not is_dnf:
+                if speed < 0.2:
+                    self.stopped_frames[cid] += 1
+                    if self.stopped_frames[cid] >= 500:
+                        steward_state.is_dnf = True
+                        steward_state.dnf_reason = "STOPPED ON TRACK (>10s)"
+                        self.race_events.append({
+                            "step": step,
+                            "time": round(step / self.fps, 2),
+                            "type": "DNF",
+                            "text": f"CAR {timing_driver.code} - RETIRED (STOPPED ON TRACK)",
+                            "car_id": cid,
+                        })
+                else:
+                    self.stopped_frames[cid] = 0
 
             # Append telemetry state
             act = actions[cid]
@@ -502,26 +540,51 @@ class MultiCarWorld:
             self._prev_heading[cid] = heading
 
         # 7. Lifecycle & Session End Resolution
-        # All non-DNF cars finished or timed out after winner
         all_eligible_finished = all(
-            (self.timing.drivers[cid].laps_completed >= self.total_laps or self.stewards.states[cid].is_dnf)
+            (cid in self.finished_cars or self.stewards.states[cid].is_dnf)
             for cid in self.cars
         )
 
-        # 120s cutoff after winner for stranded cars
+        # 120s cutoff after winner for stranded cars (default 120 s)
         time_since_winner = (step - self.winner_finish_step) if self.winner_id else 0
-        timed_out = (self.winner_id is not None) and (time_since_winner >= int(120 * self.fps))
+        timed_out = (self.winner_id is not None) and (time_since_winner >= int(self.timeout_seconds * self.fps))
+
+        if timed_out:
+            for cid in self.cars:
+                if cid not in self.finished_cars and not self.stewards.states[cid].is_dnf:
+                    self.stewards.states[cid].is_dnf = True
+                    self.stewards.states[cid].dnf_reason = "NOT CLASSIFIED (>120s BEHIND WINNER)"
+                    self.race_events.append({
+                        "step": step,
+                        "time": round(step / self.fps, 2),
+                        "type": "NOT_CLASSIFIED",
+                        "text": f"CAR {self.driver_meta[cid]['code']} - NOT CLASSIFIED (TIME LIMIT EXCEEDED)",
+                        "car_id": cid,
+                    })
 
         if (all_eligible_finished or timed_out) and self.session_end_step < 0:
             self.last_finisher_step = step
-            # Requirement: Session ends exactly 750 steps (15s) after the last finisher
+            # Requirement: Session ends exactly 750 steps (15s @ 50 FPS) after the last finisher
             self.session_end_step = self.last_finisher_step + 750
+            self.race_state = "COOLDOWN"
             self.race_events.append({
                 "step": step,
                 "time": round(step / self.fps, 2),
                 "type": "cooldown_start",
                 "text": "ALL CLASSIFIED CARS FINISHED - 15s COOLDOWN TO RESULTS",
             })
+
+        # Broadcast visible countdown during COOLDOWN
+        if self.session_end_step > 0 and step < self.session_end_step:
+            rem_steps = self.session_end_step - step
+            if rem_steps % 50 == 0:  # Every second (50 FPS)
+                rem_s = int(rem_steps / self.fps)
+                self.race_events.append({
+                    "step": step,
+                    "time": round(step / self.fps, 2),
+                    "type": "countdown",
+                    "text": f"SESSION ENDS IN 00:{rem_s:02d}",
+                })
 
         # Append new steward notices
         recent_notices = self.stewards.get_recent_notices(step, window_steps=1)
@@ -540,9 +603,9 @@ class MultiCarWorld:
             self.race_state = "RESULTS"
             return False
 
-        # Hard safety cap (10 laps is ~12,500 steps, cap at 30,000 steps)
-        if step >= 30000:
-            print("[WARN] Hard safety cap reached at 30,000 steps. Terminating session.")
+        # Hard safety cap (generous cap against infinite loops)
+        if step >= 35000:
+            print("[WARN] Hard safety cap reached at 35,000 steps. Terminating session.")
             return False
 
         return True

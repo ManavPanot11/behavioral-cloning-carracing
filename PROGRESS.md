@@ -191,3 +191,24 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
   - Side-swipe collision: Lateral contact resolved without tunneling ($d \ge 2.0\text{m}$) or NaN.
   - 6-car simulation & RTF: 6-car race simulation verified running at **2.38x real-time factor**.
 - [x] Regression validation: All 50 tests (39 baseline + 6 findings + 5 shared-world) pass 100% in 105.93s.
+
+### Shared-World Engine Phase 3: Race Lifecycle & State Machine
+- [x] Full Race Lifecycle State Machine (`GRID` -> `LIGHTS` -> `RACING` -> `CHEQUERED` -> `FINISHING` -> `COOLDOWN` -> `RESULTS`):
+  - Session ends exactly 750 steps (15.0 s @ 50 FPS) after the last classified car crosses the finish line.
+  - Lapped cars finish on their next finish-line crossing after the race winner has taken the chequered flag.
+  - Finished and retired cars decelerate smoothly under gentle engine braking, continuing along track curve rather than freezing in place.
+  - Cooldown countdown generates visible `"SESSION ENDS IN 00:xx"` race control events every 1.0 second (50 steps).
+  - Retired (>150 frames off-track) and stopped cars (>500 frames / 10s at speed < 0.2 m/s) are marked DNF and never block the session end.
+  - Stranded cars that cannot finish within 120s of the winner are classified as NOT CLASSIFIED.
+  - Generous hard safety step cap safeguards against infinite loops.
+- [x] Verification Suite (`tests/test_race_lifecycle.py`):
+  - `test_synthetic_crossing_times`: Last crossing + 750 steps verified.
+  - `test_dnf_does_not_block_session_end`: DNF car does not impede session end.
+  - `test_all_dnf_race_ends_cleanly`: Clean resolution when all cars retire.
+  - `test_late_car_delayed_by_collision`: Delayed car extension verified.
+  - `test_single_car_race`: Clean lifecycle for 1-car races.
+  - `test_lapped_cars_finish_on_crossing_after_winner`: Lapped car checkered flag semantics verified.
+  - `test_stopped_car_on_track_dnf`: >500 frames stopped triggers DNF without blocking race end.
+  - `test_cooldown_countdown_events`: Cooldown broadcasts 1s interval countdown notifications.
+  - `test_10_lap_race_longer_than_4_06`: 10-lap race past 12,302 steps (13,052 steps) executed without arbitrary timeout.
+- [x] Full Regression Suite: All 59 tests pass cleanly in 109.90s.
