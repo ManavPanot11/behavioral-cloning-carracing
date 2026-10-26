@@ -1,0 +1,9 @@
+name,mode,seed,split,laps_completed,n_episodes,mean_autonomy,mean_score,mean_offroad_events,mean_track_progress
+dagger_s1,dagger,1,dev,20,20,100.0,889.4,0.0,100.0
+dagger_s1,dagger,1,dev,20,20,100.0,891.3,0.0,100.0
+aug_s2,aug,2,dev,20,20,100.0,887.4,0.0,100.0
+dagger_s2,dagger,2,dev,20,20,100.0,889.6,0.0,100.0
+dagger_s2,dagger,2,dev,20,20,100.0,886.6,0.0,100.0
+aug_s0,aug,0,dev,20,20,100.0,891.8,0.0,100.0
+dagger_s0,dagger,0,dev,20,20,100.0,889.6,0.0,100.0
+dagger_s0,dagger,0,dev,20,20,100.0,887.3,0.0,100.0

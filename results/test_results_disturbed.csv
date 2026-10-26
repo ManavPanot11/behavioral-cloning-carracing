@@ -1,0 +1,12 @@
+condition,driver,mode,model_seed,laps_completed,laps_ratio,mean_progress,mean_steps_to_finish,mean_offroad_events,mean_centre_distance,mean_max_centre_distance,mean_steer_jitter,mean_speed,autonomy
+disturbed,expert,expert,,20,20/20,100.0,1156.1,0.0,2.05,6.37,0.0873,43.0,100.0
+disturbed,zero,zero,,0,0/20,7.93,0.0,1.05,76.78,192.11,0.0,59.23,0.0
+disturbed,plain_s0,plain,0,19,19/20,98.86,1133.4,0.05,2.4,8.81,0.0756,43.91,98.52
+disturbed,plain_s1,plain,1,18,18/20,97.74,1157.7,0.7,2.42,9.43,0.0823,42.0,91.53
+disturbed,plain_s2,plain,2,17,17/20,93.89,1169.2,0.2,2.94,13.43,0.0817,42.19,93.85
+disturbed,aug_s0,aug,0,20,20/20,100.0,1121.6,0.0,2.07,6.43,0.0741,44.65,100.0
+disturbed,aug_s1,aug,1,20,20/20,100.0,1113.0,0.0,2.07,6.4,0.0739,44.87,100.0
+disturbed,aug_s2,aug,2,20,20/20,100.0,1144.9,0.0,2.04,6.24,0.0753,43.85,100.0
+disturbed,dagger_s0,dagger,0,20,20/20,100.0,1183.6,0.0,2.03,6.38,0.0855,42.27,100.0
+disturbed,dagger_s1,dagger,1,20,20/20,100.0,1109.2,0.0,2.08,6.44,0.0773,44.98,100.0
+disturbed,dagger_s2,dagger,2,20,20/20,100.0,1140.2,0.0,2.05,6.35,0.0814,43.76,100.0

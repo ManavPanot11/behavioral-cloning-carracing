@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Autonomous Grand Prix — 10-Lap Multi-Car Race Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #090a0f;
+      --bg-surface: #12151f;
+      --bg-card: rgba(22, 26, 38, 0.75);
+      --bg-card-hover: rgba(30, 36, 52, 0.9);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-active: rgba(225, 6, 0, 0.6);
+      
+      --f1-red: #e10600;
+      --f1-gold: #ffc700;
+      --f1-purple: #a335ee;
+      --f1-green: #00d26a;
+      
+      --car-dagger: #ff2a2a;
+      --car-aug: #1e90ff;
+      --car-plain: #00e676;
+      --car-expert: #ffd600;
+
+      --text-main: #f0f2f8;
+      --text-muted: #8b92a5;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: linear-gradient(180deg, rgba(20, 24, 35, 0.95) 0%, rgba(12, 14, 20, 0.85) 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .f1-badge {
+      background: var(--f1-red);
+      color: white;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 900;
+      font-size: 1.1rem;
+      padding: 3px 10px;
+      border-radius: 4px;
+      letter-spacing: -0.5px;
+      box-shadow: 0 0 16px rgba(225, 6, 0, 0.5);
+    }
+
+    .title-group h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      background: linear-gradient(90deg, #ffffff 0%, #b0b8d0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .title-group p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .header-pills {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .badge-pill {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--f1-green);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--f1-green);
+      animation: pulse 1.6s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* Main Grid Layout */
+    .app-container {
+      display: grid;
+      grid-template-columns: 290px 1fr 340px;
+      gap: 20px;
+      padding: 20px 24px;
+      flex: 1;
+      max-width: 1780px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    @media (max-width: 1380px) {
+      .app-container {
+        grid-template-columns: 270px 1fr;
+      }
+      .right-column {
+        grid-column: span 2;
+      }
+    }
+
+    @media (max-width: 960px) {
+      .app-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Left Column: F1 Timing Tower */
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .panel-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tower-header-pill {
+      background: rgba(225, 6, 0, 0.15);
+      border: 1px solid rgba(225, 6, 0, 0.4);
+      color: #ff5252;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .driver-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .driver-row {
+      background: rgba(14, 17, 26, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: 24px 6px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      user-select: none;
+    }
+
+    .driver-row:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateX(3px);
+    }
+
+    .driver-row.active {
+      background: rgba(26, 32, 48, 0.95);
+      border-color: rgba(255, 255, 255, 0.35);
+      box-shadow: 0 0 16px rgba(0, 0, 0, 0.5);
+    }
+
+    .driver-row.active::after {
+      content: 'CAM ACTIVE';
+      position: absolute;
+      right: 8px;
+      top: -7px;
+      background: var(--f1-red);
+      color: white;
+      font-size: 0.6rem;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 3px;
+      letter-spacing: 0.5px;
+    }
+
+    .driver-pos {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: #a0a8c0;
+      text-align: center;
+    }
+
+    .driver-stripe {
+      width: 4px;
+      height: 24px;
+      border-radius: 2px;
+    }
+
+    .driver-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .driver-code {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 0.95rem;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .driver-name-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .driver-gap {
+      font-family: 'Inter', monospace;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #c4ccdf;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .gap-leader {
+      color: var(--f1-gold);
+      font-weight: 700;
+    }
+
+    .fl-badge {
+      background: var(--f1-purple);
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    /* Mode Selector Buttons */
+    .mode-pills {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 14px;
+    }
+
+    .mode-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      color: #cfd4e2;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.15s ease;
+    }
+
+    .mode-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+    }
+
+    .mode-btn.active {
+      background: rgba(225, 6, 0, 0.2);
+      border-color: var(--f1-red);
+      color: white;
+    }
+
+    /* Center Column: Video Player & Telemetry */
+    .center-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .video-viewport {
+      background: #000;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      position: relative;
+      aspect-ratio: 16 / 10.5;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Video HUD Overlays */
+    .video-tag-overlay {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: rgba(10, 12, 18, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(8px);
+    }
+
+    .rec-dot {
+      width: 7px;
+      height: 7px;
+      background: var(--f1-red);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--f1-red);
+    }
+
+    /* Controls Bar */
+    .player-controls {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .scrubber-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .time-readout {
+      font-family: 'Inter', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      width: 85px;
+    }
+
+    .scrubber {
+      flex: 1;
+      accent-color: var(--f1-red);
+      height: 6px;
+      cursor: pointer;
+    }
+
+    .control-buttons-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .action-btn.active {
+      background: var(--f1-red);
+      border-color: var(--f1-red);
+    }
+
+    /* Telemetry Deck */
+    .telemetry-deck {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .metric-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .metric-val {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: white;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .metric-unit {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .gauge-bar-bg {
+      height: 5px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .gauge-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.1s linear;
+    }
+
+    /* Right Column: Minimap & Classification */
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .minimap-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #track-svg {
+      width: 100%;
+      height: 220px;
+      display: block;
+    }
+
+    /* Classification Table */
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 8px 10px;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.72rem;
+      border-bottom: 1px solid var(--border-color);
+      text-transform: uppercase;
+    }
+
+    td {
+      padding: 9px 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    /* Diagnostic Analysis Section */
+    .analysis-section {
+      max-width: 1780px;
+      margin: 12px auto 32px auto;
+      padding: 0 24px;
+      width: 100%;
+    }
+
+    .analysis-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .analysis-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 800;
+    }
+
+    .analysis-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: #b8c0d6;
+    }
+
+    @media (max-width: 960px) {
+      .analysis-content {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .highlight-box {
+      background: rgba(14, 18, 28, 0.7);
+      border-left: 3px solid var(--f1-red);
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+    }
+
+    .highlight-box h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 6px;
+    }
+
+    code {
+      background: rgba(255, 255, 255, 0.08);
+      color: #ff8080;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 0.85em;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="f1-badge">F1</div>
+      <div class="title-group">
+        <h1>AUTONOMOUS GRAND PRIX</h1>
+        <p>10 Laps Wheel-to-Wheel Championship · Gymnasium CarRacing-v3 Physics</p>
+      </div>
+    </div>
+    <div class="header-pills">
+      <div class="badge-pill">
+        <span class="live-dot"></span>
+        <span id="header-status">10 LAPS LIVE</span>
+      </div>
+      <div class="badge-pill" style="border-color: rgba(255, 199, 0, 0.3); color: var(--f1-gold);">
+        TRACK SEED 1000
+      </div>
+    </div>
+  </header>
+
+  <main class="app-container">
+
+    <!-- Left Column: Formula 1 Timing Tower -->
+    <section class="left-column">
+      <div class="panel-card">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>TIMING TOWER</span>
+          </div>
+          <span class="tower-header-pill" id="tower-lap-pill">LAP 1/10</span>
+        </div>
+
+        <div class="driver-list" id="driver-tower">
+          <!-- Populated dynamically / clickable to switch camera feeds -->
+          <div class="driver-row active" data-car="2" id="card-pln">
+            <span class="driver-pos">1</span>
+            <div class="driver-stripe" style="background: var(--car-plain);"></div>
+            <div class="driver-info">
+              <span class="driver-code">PLN</span>
+              <span class="driver-name-sub">Plain AI (Green)</span>
+            </div>
+            <div class="driver-gap gap-leader">P1 · WINNER <span class="fl-badge">FL</span></div>
+          </div>
+
+          <div class="driver-row" data-car="1" id="card-aug">
+            <span class="driver-pos">2</span>
+            <div class="driver-stripe" style="background: var(--car-aug);"></div>
+            <div class="driver-info">
+              <span class="driver-code">AUG</span>
+              <span class="driver-name-sub">Augmented AI (Blue)</span>
+            </div>
+            <div class="driver-gap">+4.46s</div>
+          </div>
+
+          <div class="driver-row" data-car="3" id="card-exp">
+            <span class="driver-pos">3</span>
+            <div class="driver-stripe" style="background: var(--car-expert);"></div>
+            <div class="driver-info">
+              <span class="driver-code">EXP</span>
+              <span class="driver-name-sub">Pure-Pursuit Expert</span>
+            </div>
+            <div class="driver-gap">+5.30s</div>
+          </div>
+
+          <div class="driver-row" data-car="0" id="card-dag">
+            <span class="driver-pos">4</span>
+            <div class="driver-stripe" style="background: var(--car-dagger);"></div>
+            <div class="driver-info">
+              <span class="driver-code">DAG</span>
+              <span class="driver-name-sub">DAgger AI (Red)</span>
+            </div>
+            <div class="driver-gap">+10.28s</div>
+          </div>
+        </div>
+
+        <div class="mode-pills">
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">
+            Camera Feeds (Click Car to Switch)
+          </div>
+          <button class="mode-btn active" id="btn-broadcast" onclick="switchMode('broadcast')">
+            <span>📺 Director / Broadcast Cam</span>
+            <span style="font-size: 0.7rem; color: var(--f1-gold);">LEADER</span>
+          </button>
+          <button class="mode-btn" id="btn-quad" onclick="switchMode('quad')">
+            <span>🔲 F1 Quad-View (2x2 Multi-Cam)</span>
+            <span style="font-size: 0.7rem; color: #a0a8c0;">4 FEEDS</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Race Stats -->
+      <div class="panel-card" style="font-size: 0.8rem;">
+        <div class="panel-header" style="margin-bottom: 8px; padding-bottom: 6px;">
+          <span style="font-weight: 700; color: #b8c0d6;">SESSION INFO</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="color: var(--text-muted);">Total Distance:</span>
+          <span style="font-weight: 600;">10 Laps (2,930 Waypoints)</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="color: var(--text-muted);">Start Grid:</span>
+          <span style="font-weight: 600;">F1 Staggered 4-Car</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--text-muted);">Finish Line:</span>
+          <span style="font-weight: 600; color: var(--f1-gold);">Checkered F1 Asphalt</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Center Column: Video Stage & Controls -->
+    <section class="center-column">
+      <div class="video-viewport" id="viewport">
+        <video id="race-video" autoplay loop muted playsinline>
+          <source src="videos/race_10laps_f1.mp4" type="video/mp4">
+          Your browser does not support HTML5 video.
+        </video>
+        <div class="video-tag-overlay">
+          <span class="rec-dot"></span>
+          <span id="active-cam-title">ONBOARD · CAR 1 [DAGGER] (CRIMSON)</span>
+        </div>
+      </div>
+
+      <!-- Player Controls -->
+      <div class="player-controls">
+        <div class="scrubber-row">
+          <span class="time-readout" id="current-time">00:00 / 00:00</span>
+          <input type="range" class="scrubber" id="time-scrubber" min="0" max="100" value="0" step="0.1">
+        </div>
+        <div class="control-buttons-row">
+          <div class="btn-group">
+            <button class="action-btn" id="btn-play-pause" onclick="togglePlay()">⏸️ Pause</button>
+            <button class="action-btn" onclick="seekRelative(-5)">⏪ -5s</button>
+            <button class="action-btn" onclick="seekRelative(5)">+5s ⏩</button>
+          </div>
+          <div class="btn-group">
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">SPEED:</span>
+            <button class="action-btn active" id="spd-1" onclick="setSpeed(1.0)">1x</button>
+            <button class="action-btn" id="spd-15" onclick="setSpeed(1.5)">1.5x</button>
+            <button class="action-btn" id="spd-2" onclick="setSpeed(2.0)">2x</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Telemetry Deck -->
+      <div class="telemetry-deck">
+        <div class="metric-card">
+          <span class="metric-label">Focused Speed</span>
+          <div class="metric-val" id="telemetry-speed">118 <span class="metric-unit">KM/H</span></div>
+          <div class="gauge-bar-bg">
+            <div class="gauge-bar-fill" id="bar-speed" style="width: 78%; background: var(--f1-gold);"></div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <span class="metric-label">Throttle (THR)</span>
+          <div class="metric-val" id="telemetry-gas">85 <span class="metric-unit">%</span></div>
+          <div class="gauge-bar-bg">
+            <div class="gauge-bar-fill" id="bar-gas" style="width: 85%; background: var(--f1-green);"></div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <span class="metric-label">Brake (BRK)</span>
+          <div class="metric-val" id="telemetry-brake">0 <span class="metric-unit">%</span></div>
+          <div class="gauge-bar-bg">
+            <div class="gauge-bar-fill" id="bar-brake" style="width: 0%; background: var(--f1-red);"></div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <span class="metric-label">Lap Progress</span>
+          <div class="metric-val" id="telemetry-lap">4 <span class="metric-unit">/ 10 LAPS</span></div>
+          <div class="gauge-bar-bg">
+            <div class="gauge-bar-fill" id="bar-lap" style="width: 40%; background: var(--f1-purple);"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Live Track Minimap & Final Standings -->
+    <section class="right-column">
+      <div class="minimap-container">
+        <div class="panel-header" style="width: 100%; margin-bottom: 6px;">
+          <span class="panel-title">CIRCUIT MINIMAP</span>
+          <span style="font-size: 0.72rem; color: var(--f1-gold); font-weight: 700;">START/FINISH 🏁</span>
+        </div>
+        <svg id="track-svg" viewBox="-120 -120 240 240">
+          <!-- Road path and car dots rendered dynamically by JS -->
+        </svg>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-header">
+          <span class="panel-title">10-LAP CLASSIFICATION</span>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Pos</th>
+                <th>Driver</th>
+                <th>Laps</th>
+                <th>Best Lap</th>
+              </tr>
+            </thead>
+            <tbody id="classification-tbody">
+              <tr>
+                <td style="font-weight: 800; color: var(--f1-gold);">P1</td>
+                <td><span style="color: var(--car-plain);">●</span> PLAIN</td>
+                <td>10</td>
+                <td>17.86s <span class="fl-badge">FL</span></td>
+              </tr>
+              <tr>
+                <td style="font-weight: 800;">P2</td>
+                <td><span style="color: var(--car-aug);">●</span> AUGMENTED</td>
+                <td>7</td>
+                <td>22.32s</td>
+              </tr>
+              <tr>
+                <td style="font-weight: 800;">P3</td>
+                <td><span style="color: var(--car-expert);">●</span> EXPERT</td>
+                <td>7</td>
+                <td>23.16s</td>
+              </tr>
+              <tr>
+                <td style="font-weight: 800;">P4</td>
+                <td><span style="color: var(--car-dagger);">●</span> DAGGER</td>
+                <td>5</td>
+                <td>28.14s</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Technical Analysis Section: Explaining the Finish Line Root Cause -->
+  <section class="analysis-section">
+    <div class="analysis-card">
+      <div class="analysis-header">
+        <span class="f1-badge">DIAGNOSTIC REPORT</span>
+        <h2>Why Earlier Videos Ended Before Crossing the Finish Line & How the 10-Lap Race Solves It</h2>
+      </div>
+
+      <div class="analysis-content">
+        <div class="highlight-box">
+          <h3>1. The Root Cause in Gymnasium's Box2D Contact Listener</h3>
+          <p>
+            In Gymnasium's <code>CarRacing-v3</code> (specifically inside <code>FrictionDetector.BeginContact</code> in <code>car_racing.py</code>), the simulator monitors wheel contact with track tiles.
+            When any wheel touches tile 0 (<code>tile.idx == 0</code>) and the car has covered <code>> 95%</code> of the track, the environment sets <code>self.env.new_lap = True</code>.
+          </p>
+          <p style="margin-top: 8px;">
+            In <code>CarRacing.step()</code>, the termination check is evaluated:
+            <code>if self.tile_visited_count == len(self.track) or self.new_lap: terminated = True</code>.
+            Because tile 0 spans the track polygon immediately leading up to the start/finish coordinate <code>track[0]</code>, <strong>the exact millisecond the leading edge of the front tire first grazed tile 0</strong>, the step returned <code>terminated = True</code>!
+            The evaluation scripts immediately exited their <code>while not (terminated or truncated)</code> loop. The frame where contact occurred was not even shown, cutting the video abruptly before the car's body ever passed across the finish line.
+          </p>
+        </div>
+
+        <div class="highlight-box" style="border-left-color: var(--f1-green);">
+          <h3>2. The Solution: Checkered Line, Sector Checkpoints & 10 Laps</h3>
+          <p>
+            Our new multi-car racing harness completely overhauls the finish line and lap detection architecture:
+          </p>
+          <ul style="margin-left: 18px; margin-top: 6px;">
+            <li><strong>Explicit Checkered Finish Line:</strong> Tile 0 is replaced with a bold, high-contrast black-and-white checkered Grand Prix grid strip, flanked by red-and-white kerbing.</li>
+            <li><strong>2-Checkpoint Sector Validation:</strong> A lap cannot be completed without visiting Checkpoint 1 (waypoint ~96) and Checkpoint 2 (waypoint ~193). This eliminates false triggers from boundary oscillations.</li>
+            <li><strong>Body Crossing Geometry:</strong> The center of the car must pass completely across the finish line vector into the early sector of the next lap.</li>
+            <li><strong>Full 10 Laps & Victory Cool-Down:</strong> The race runs for the full 10 laps, followed by an authentic victory roll after the checkered flag.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // Video Sources mapping
+    const videoSources = {
+      broadcast: 'videos/race_10laps_f1.mp4',
+      0: 'videos/race_dagger.mp4',
+      1: 'videos/race_augmented.mp4',
+      2: 'videos/race_plain.mp4',
+      3: 'videos/race_expert.mp4',
+      quad: 'videos/race_quad.mp4'
+    };
+
+    const carNames = {
+      0: 'ONBOARD · CAR 1 [DAGGER] (CRIMSON)',
+      1: 'ONBOARD · CAR 2 [AUGMENTED] (ELECTRIC BLUE)',
+      2: 'ONBOARD · CAR 3 [PLAIN] (RACING GREEN)',
+      3: 'ONBOARD · CAR 4 [EXPERT] (AMBER GOLD)',
+      broadcast: 'DIRECTOR CUT · RACE BROADCAST (LEADER CAM)',
+      quad: 'F1 MULTIVIEW · 2x2 QUAD-CAM FEED'
+    };
+
+    let currentMode = 'broadcast';
+    let telemetryData = null;
+    const video = document.getElementById('race-video');
+    const scrubber = document.getElementById('time-scrubber');
+    const currentTimeEl = document.getElementById('current-time');
+    const camTitleEl = document.getElementById('active-cam-title');
+
+    // Switch camera mode / focus on car
+    function switchMode(mode) {
+      if (currentMode === mode) return;
+
+      const currentTime = video.currentTime;
+      const isPaused = video.paused;
+
+      currentMode = mode;
+      video.src = videoSources[mode] || videoSources['broadcast'];
+      video.currentTime = currentTime;
+
+      if (!isPaused) {
+        video.play().catch(e => console.log('Autoplay handled:', e));
+      }
+
+      // Update UI selection
+      document.querySelectorAll('.driver-row').forEach(row => {
+        const carIdx = row.getAttribute('data-car');
+        row.classList.toggle('active', carIdx === String(mode));
+      });
+
+      document.getElementById('btn-broadcast').classList.toggle('active', mode === 'broadcast');
+      document.getElementById('btn-quad').classList.toggle('active', mode === 'quad');
+
+      camTitleEl.innerText = carNames[mode] || 'CAMERA FEED';
+    }
+
+    // Attach click events to driver rows in left panel
+    document.querySelectorAll('.driver-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const carIdx = parseInt(row.getAttribute('data-car'));
+        switchMode(carIdx);
+      });
+    });
+
+    // Play / Pause toggle
+    function togglePlay() {
+      const btn = document.getElementById('btn-play-pause');
+      if (video.paused) {
+        video.play();
+        btn.innerText = '⏸️ Pause';
+      } else {
+        video.pause();
+        btn.innerText = '▶️ Play';
+      }
+    }
+
+    function seekRelative(delta) {
+      video.currentTime = Math.max(0, Math.min(video.duration || 100, video.currentTime + delta));
+    }
+
+    function setSpeed(spd) {
+      video.playbackRate = spd;
+      document.querySelectorAll('#spd-1, #spd-15, #spd-2').forEach(b => b.classList.remove('active'));
+      if (spd === 1.0) document.getElementById('spd-1').classList.add('active');
+      if (spd === 1.5) document.getElementById('spd-15').classList.add('active');
+      if (spd === 2.0) document.getElementById('spd-2').classList.add('active');
+    }
+
+    // Scrubber update
+    video.addEventListener('timeupdate', () => {
+      if (video.duration) {
+        scrubber.value = (video.currentTime / video.duration) * 100;
+        currentTimeEl.innerText = formatTime(video.currentTime) + ' / ' + formatTime(video.duration);
+        updateLiveTelemetry(video.currentTime);
+      }
+    });
+
+    scrubber.addEventListener('input', () => {
+      if (video.duration) {
+        video.currentTime = (scrubber.value / 100) * video.duration;
+      }
+    });
+
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    // Load Telemetry Data
+    fetch('data/race_telemetry.json')
+      .then(res => res.json())
+      .then(data => {
+        telemetryData = data;
+        renderMinimapTrack(data.track_waypoints, data.finish_line);
+      })
+      .catch(e => console.log('Telemetry json loaded lazily:', e));
+
+    // Render Circuit SVG Minimap
+    function renderMinimapTrack(waypoints, finishLine) {
+      const svg = document.getElementById('track-svg');
+      if (!waypoints || waypoints.length === 0) return;
+
+      // Find bounding box
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      waypoints.forEach(([x, y]) => {
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+      });
+
+      const pad = 20;
+      const w = (maxX - minX) + pad * 2;
+      const h = (maxY - minY) + pad * 2;
+      svg.setAttribute('viewBox', `${minX - pad} ${minY - pad} ${w} ${h}`);
+
+      // Path
+      let d = `M ${waypoints[0][0]} ${waypoints[0][1]} `;
+      for (let i = 1; i < waypoints.length; i++) {
+        d += `L ${waypoints[i][0]} ${waypoints[i][1]} `;
+      }
+      d += 'Z';
+
+      svg.innerHTML = `
+        <path d="${d}" fill="none" stroke="#2a3044" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="${d}" fill="none" stroke="#10131d" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Start / Finish Line -->
+        <circle cx="${finishLine[0]}" cy="${finishLine[1]}" r="5" fill="#ffc700" stroke="#fff" stroke-width="2"/>
+        <!-- Car Dots -->
+        <circle id="dot-0" cx="0" cy="0" r="4.5" fill="#ff2a2a" stroke="#fff" stroke-width="1"/>
+        <circle id="dot-1" cx="0" cy="0" r="4.5" fill="#1e90ff" stroke="#fff" stroke-width="1"/>
+        <circle id="dot-2" cx="0" cy="0" r="4.5" fill="#00e676" stroke="#fff" stroke-width="1"/>
+        <circle id="dot-3" cx="0" cy="0" r="4.5" fill="#ffd600" stroke="#fff" stroke-width="1"/>
+      `;
+    }
+
+    // Live Telemetry Frame Update
+    function updateLiveTelemetry(curTime) {
+      if (!telemetryData || !telemetryData.frames) return;
+      const frameIdx = Math.min(
+        telemetryData.frames.length - 1,
+        Math.max(0, Math.floor(curTime * 10))
+      );
+      const frame = telemetryData.frames[frameIdx];
+      if (!frame) return;
+
+      // Update Lap counter in header and timing tower
+      document.getElementById('tower-lap-pill').innerText = `LAP ${frame.lap}/10`;
+      document.getElementById('header-status').innerText = `${frame.status} · LAP ${frame.lap}/10`;
+
+      // Update Focused car telemetry
+      let targetCarIdx = 0;
+      if (typeof currentMode === 'number') {
+        targetCarIdx = currentMode;
+      } else if (frame.standings && frame.standings.length > 0) {
+        targetCarIdx = frame.standings[0].idx; // Follow leader in broadcast mode
+      }
+
+      const car = frame.cars.find(c => c.idx === targetCarIdx);
+      if (car) {
+        document.getElementById('telemetry-speed').innerHTML = `${car.speed_kmh} <span class="metric-unit">KM/H</span>`;
+        document.getElementById('bar-speed').style.width = `${Math.min(100, (car.speed_kmh / 140) * 100)}%`;
+
+        document.getElementById('telemetry-gas').innerHTML = `${Math.round(car.gas * 100)} <span class="metric-unit">%</span>`;
+        document.getElementById('bar-gas').style.width = `${Math.round(car.gas * 100)}%`;
+
+        document.getElementById('telemetry-brake').innerHTML = `${Math.round(car.brake * 100)} <span class="metric-unit">%</span>`;
+        document.getElementById('bar-brake').style.width = `${Math.round(car.brake * 100)}%`;
+
+        document.getElementById('telemetry-lap').innerHTML = `${car.lap + 1} <span class="metric-unit">/ 10 LAPS</span>`;
+        document.getElementById('bar-lap').style.width = `${((car.lap + 1) / 10) * 100}%`;
+      }
+
+      // Update Minimap Dots
+      frame.cars.forEach(c => {
+        const dot = document.getElementById(`dot-${c.idx}`);
+        if (dot) {
+          dot.setAttribute('cx', c.x);
+          dot.setAttribute('cy', c.y);
+        }
+      });
+    }
+  </script>
+</body>
+</html>

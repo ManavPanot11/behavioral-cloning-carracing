@@ -1,0 +1,28 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python cache & build
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Large binary datasets (>65 MB)
+data/*.npz
+
+# Large raw test video (>345 MB, exceeds GitHub 100MB limit)
+videos/test_2laps.mp4
+
+# Logs
+logs/*.log
+
+# IDE & OS files
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
