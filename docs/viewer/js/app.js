@@ -1,5 +1,5 @@
 /**
- * docs/viewer/js/app.js - Main Application Orchestrator for 3D Replay Viewer
+ * docs/viewer/js/app.js - Main Application Orchestrator for 3D Replay Viewer & Live Stream.
  */
 
 import { TrackScene } from './scene.js';
@@ -24,14 +24,22 @@ class ReplayApp {
     this.isManualStartPending = true; // Wait for manual start
     this.lightsSequenceActive = false;
 
+    // Live mode state
+    this.isLiveMode = false;
+    this.ws = null;
+    this._lastSparkStep = -1;
+
     // HUD Elements
     this.initDOMElements();
     this.setupEventListeners();
 
-    // Check URL parameters (?capture=1&frame=N&camera=3, ?replay=...)
+    // Check URL parameters (?capture=1&frame=N&camera=3, ?replay=..., ?live=1)
     this.urlParams = new URLSearchParams(window.location.search);
-    const replayFile = this.urlParams.get('replay') || 'data/race_3003.json';
-    this.loadReplay(replayFile);
+    if (this.urlParams.get('live') === '1') {
+      this.connectLiveWebSocket();
+    } else {
+      this.initReplayMode();
+    }
 
     // Animation Loop
     this.lastTime = performance.now();
@@ -40,6 +48,9 @@ class ReplayApp {
 
   initDOMElements() {
     this.dom = {
+      liveBadge: document.getElementById('live-badge'),
+      sessionCountdownBanner: document.getElementById('session-countdown-banner'),
+      timelineMarkersContainer: document.getElementById('timeline-markers-container'),
       timingTower: document.getElementById('driver-tower'),
       telemetrySpeed: document.getElementById('telemetry-speed'),
       barSpeed: document.getElementById('bar-speed'),
@@ -111,7 +122,7 @@ class ReplayApp {
 
     // Scrubber
     this.dom.timeScrubber.addEventListener('input', (e) => {
-      if (this.maxSteps > 0) {
+      if (this.maxSteps > 0 && !this.isLiveMode) {
         const step = (parseFloat(e.target.value) / 100.0) * this.maxSteps;
         this.seekToStep(step);
       }
@@ -182,6 +193,260 @@ class ReplayApp {
     });
   }
 
+  initReplayMode() {
+    if (this.dom.liveBadge) {
+      this.dom.liveBadge.innerText = 'REPLAY';
+      this.dom.liveBadge.classList.remove('live');
+    }
+    const replayFile = this.urlParams.get('replay');
+    if (replayFile) {
+      this.loadReplay(replayFile);
+    } else {
+      // Fetch catalog index.json and pick random replay
+      fetch('data/index.json')
+        .then((res) => {
+          if (!res.ok) throw new Error('No index.json');
+          return res.json();
+        })
+        .then((catalog) => {
+          const replays = Array.isArray(catalog) ? catalog : (catalog.replays || []);
+          if (replays && replays.length > 0) {
+            if (this.dom.replaySelect) {
+              this.dom.replaySelect.innerHTML = '';
+              replays.forEach((item) => {
+                const opt = document.createElement('option');
+                opt.value = item.file;
+                opt.innerText = item.name;
+                this.dom.replaySelect.appendChild(opt);
+              });
+            }
+            const randomIndex = Math.floor(Math.random() * replays.length);
+            const chosen = replays[randomIndex];
+            if (this.dom.replaySelect) {
+              this.dom.replaySelect.value = chosen.file;
+            }
+            this.loadReplay(chosen.file);
+          } else {
+            this.loadReplay('data/race_3003.json');
+          }
+        })
+        .catch(() => {
+          this.loadReplay('data/race_3003.json');
+        });
+    }
+  }
+
+  connectLiveWebSocket() {
+    this.isLiveMode = true;
+    if (this.dom.liveBadge) {
+      this.dom.liveBadge.innerText = '● LIVE';
+      this.dom.liveBadge.classList.add('live');
+    }
+    if (this.dom.startGantryModal) {
+      this.dom.startGantryModal.classList.add('hidden');
+    }
+    this.isManualStartPending = false;
+    this.isPlaying = true;
+    this.dom.btnPlayPause.disabled = true;
+
+    const wsPort = this.urlParams.get('ws_port') || '8765';
+    const wsHost = window.location.hostname || '127.0.0.1';
+    const wsUrl = `ws://${wsHost}:${wsPort}`;
+    console.log('[LIVE] Connecting to WebSocket:', wsUrl);
+
+    try {
+      this.ws = new WebSocket(wsUrl);
+      this.ws.onopen = () => {
+        console.log('[LIVE] WebSocket connected.');
+        this.showRaceControlNotice('INFO', 'CONNECTED TO LIVE RACE STREAM');
+      };
+      this.ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          this.handleLiveMessage(msg);
+        } catch (e) {
+          console.error('[LIVE] Message parse error:', e);
+        }
+      };
+      this.ws.onclose = () => {
+        console.log('[LIVE] WebSocket connection closed.');
+        if (this.dom.liveBadge) {
+          this.dom.liveBadge.innerText = 'DISCONNECTED';
+          this.dom.liveBadge.classList.remove('live');
+        }
+      };
+      this.ws.onerror = (err) => {
+        console.error('[LIVE] WebSocket error:', err);
+      };
+    } catch (err) {
+      console.error('[LIVE] Failed to connect WebSocket:', err);
+    }
+  }
+
+  handleLiveMessage(msg) {
+    if (msg.type === 'init') {
+      this.parseAndInitLive(msg);
+    } else if (msg.type === 'step') {
+      this.applyLiveStep(msg);
+    } else if (msg.type === 'finish') {
+      this.showRaceControlNotice('CHEQUERED', 'GRAND PRIX FINISHED — REPLAY SAVED');
+      if (this.dom.liveBadge) {
+        this.dom.liveBadge.innerText = 'REPLAY';
+        this.dom.liveBadge.classList.remove('live');
+      }
+      this.dom.btnPlayPause.disabled = false;
+    }
+  }
+
+  parseAndInitLive(msg) {
+    this.replayData = {
+      meta: msg.meta,
+      track: msg.track,
+      drivers: msg.drivers,
+      cars: {},
+      events: [],
+      contacts: [],
+    };
+    (msg.drivers || []).forEach((d) => {
+      this.replayData.cars[d.id] = {
+        x: [], y: [], heading: [], hull_angle: [], speed: [],
+        steer: [], gas: [], brake: [], wheels: [], progress: [],
+        lap: [], offroad: [], lateral_g: []
+      };
+    });
+
+    this.scene.buildTrack(msg.track);
+    this.cameraDirector.setTracksidePosts(msg.track.centerline);
+
+    while (this.scene.carsGroup.children.length > 0) {
+      this.scene.carsGroup.remove(this.scene.carsGroup.children[0]);
+    }
+    this.cars = {};
+
+    (msg.drivers || []).forEach((d) => {
+      const car = new F1Car(d);
+      this.cars[d.id] = car;
+      this.scene.carsGroup.add(car.root);
+    });
+
+    this.focusedCarId = msg.drivers && msg.drivers.length > 0 ? msg.drivers[0].id : null;
+    this.renderTimingTower();
+    this.drawMinimapTrack(msg.track);
+  }
+
+  applyLiveStep(msg) {
+    this.currentStep = msg.step;
+    this.maxSteps = Math.max(this.maxSteps, msg.step);
+
+    // Update each car position directly
+    for (const [cid, cData] of Object.entries(msg.cars)) {
+      const car = this.cars[cid];
+      if (car) {
+        car.update(
+          cData.x,
+          cData.y,
+          cData.hull_angle !== undefined ? cData.hull_angle : (cData.heading - Math.PI / 2),
+          cData.steer || 0.0,
+          cData.gas || 0.0,
+          cData.brake || 0.0,
+          cData.speed || 0.0,
+          cData.lateral_g || 0.0
+        );
+      }
+      if (this.replayData && this.replayData.cars[cid]) {
+        const traj = this.replayData.cars[cid];
+        traj.x.push(cData.x);
+        traj.y.push(cData.y);
+        traj.speed.push(cData.speed);
+        traj.steer.push(cData.steer);
+        traj.gas.push(cData.gas);
+        traj.brake.push(cData.brake);
+        traj.wheels.push(cData.wheels);
+        traj.progress.push(cData.progress);
+        traj.lap.push(cData.lap);
+      }
+    }
+
+    // Update HUD
+    const curSec = Math.floor(msg.step / 50);
+    this.dom.currentTimeText.innerText = `LIVE: ${this.fmtTime(curSec)}`;
+    if (this.focusedCarId && msg.cars[this.focusedCarId]) {
+      const f = msg.cars[this.focusedCarId];
+      const spdKmh = Math.round((f.speed || 0.0) * 3.6);
+      this.dom.telemetrySpeed.innerText = spdKmh;
+      this.dom.barSpeed.style.width = `${Math.min(100, (spdKmh / 160) * 100)}%`;
+      this.dom.telemetryGas.innerText = `${Math.round((f.gas || 0.0) * 100)}%`;
+      this.dom.barGas.style.width = `${Math.round((f.gas || 0.0) * 100)}%`;
+      this.dom.telemetryBrake.innerText = `${Math.round((f.brake || 0.0) * 100)}%`;
+      this.dom.barBrake.style.width = `${Math.round((f.brake || 0.0) * 100)}%`;
+      this.dom.telemetrySteer.innerText = (f.steer > 0 ? '+' : '') + (f.steer || 0.0).toFixed(2);
+      this.dom.barSteer.style.width = `${((f.steer || 0.0) + 1.0) * 50.0}%`;
+      this.dom.telemetryProgress.innerText = `${(f.progress || 0.0).toFixed(1)}%`;
+      this.dom.barProgress.style.width = `${f.progress || 0.0}%`;
+      this.dom.telemetryLap.innerText = `LAP ${f.lap || 1}/${this.replayData.meta.total_laps || 10}`;
+
+      const wheels = f.wheels || [true, true, true, true];
+      this.dom.wheelDots.forEach((dot, idx) => {
+        if (dot) {
+          dot.classList.toggle('on-track', wheels[idx]);
+          dot.classList.toggle('off-track', !wheels[idx]);
+        }
+      });
+    }
+
+    // Update timing leaderboard
+    if (msg.leaderboard) {
+      this.updateLiveTimingTower(msg.leaderboard);
+    }
+
+    // Events
+    if (msg.events && msg.events.length > 0) {
+      const latest = msg.events[msg.events.length - 1];
+      this.showRaceControlNotice(latest.type, latest.text);
+    }
+
+    // Minimap
+    this.updateMinimapDots(Math.floor(this.currentStep));
+  }
+
+  updateLiveTimingTower(leaderboard) {
+    const list = this.dom.timingTower;
+    if (!list) return;
+    list.innerHTML = '';
+    leaderboard.forEach((d) => {
+      const row = document.createElement('div');
+      row.className = `driver-row ${d.id === this.focusedCarId ? 'focused' : ''}`;
+      row.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.focusedCarId = d.id;
+        document.querySelectorAll('.driver-row').forEach((r) => r.classList.remove('focused'));
+        row.classList.add('focused');
+      });
+
+      const fastLapHtml = d.is_fastest_lap
+        ? `<span style="color: var(--f1-purple); font-size: 0.7rem; font-weight: 700; margin-left: 4px;">🟣 FL</span>`
+        : '';
+      const penaltyHtml = (d.penalty_seconds && d.penalty_seconds > 0)
+        ? `<span style="color: var(--f1-red); font-size: 0.7rem; font-weight: 700; margin-left: 4px;">+${d.penalty_seconds}s</span>`
+        : '';
+
+      const paceVarianceHtml = d.pace_variance
+        ? `<span style="color: var(--text-muted); font-size: 0.68rem; margin-left: 4px;">(${d.pace_variance})</span>`
+        : '';
+
+      row.innerHTML = `
+        <span class="driver-pos">${d.pos}</span>
+        <span class="driver-bar" style="background-color: ${d.color || '#fff'};"></span>
+        <div class="driver-info">
+          <div class="driver-code">${d.code} ${fastLapHtml} ${penaltyHtml} ${paceVarianceHtml}</div>
+          <div class="driver-team">${d.team || ''}</div>
+        </div>
+        <div class="driver-gap">${d.gap !== undefined ? d.gap : '-'}</div>
+      `;
+      list.appendChild(row);
+    });
+  }
+
   updateActiveCameraButtons(mode) {
     document.querySelectorAll('.cam-btn').forEach((b) => {
       b.classList.toggle('active', parseInt(b.dataset.mode) === mode);
@@ -199,7 +464,6 @@ class ReplayApp {
       })
       .catch((err) => {
         console.error('Replay load failed:', err);
-        // Fallback default message
         this.showRaceControlNotice('NOTICE', `Could not load ${url}. Drag & drop a JSON replay file to view.`);
       });
   }
@@ -216,7 +480,6 @@ class ReplayApp {
     this.cameraDirector.setTracksidePosts(data.track.centerline);
 
     // 2. Build Cars in 3D
-    // Clear old cars
     while (this.scene.carsGroup.children.length > 0) {
       this.scene.carsGroup.remove(this.scene.carsGroup.children[0]);
     }
@@ -228,10 +491,9 @@ class ReplayApp {
       this.scene.carsGroup.add(car.root);
     });
 
-    // Default focus: Leader / Pole sitter (P1)
     this.focusedCarId = data.drivers && data.drivers.length > 0 ? data.drivers[0].id : null;
 
-    // 3. Render Initial Grid State (Cars lined up on grid)
+    // 3. Render Initial Grid State
     this.updateCars(0.0);
 
     // 4. Populate Timing Tower
@@ -243,7 +505,24 @@ class ReplayApp {
     // 6. Reset Start Gantry
     this.resetStartGantryUI();
 
-    // Check for deterministic capture parameters (?capture=1&frame=N&camera=3)
+    // 7. Populate Contact Markers on Timeline
+    if (this.dom.timelineMarkersContainer) {
+      this.dom.timelineMarkersContainer.innerHTML = '';
+      (data.contacts || []).forEach((c) => {
+        const pct = (c.step / Math.max(1, this.maxSteps)) * 100;
+        const marker = document.createElement('div');
+        marker.className = 'timeline-marker' + (c.at_fault ? ' penalty' : '');
+        marker.style.left = `${pct}%`;
+        marker.title = `Contact at Step ${c.step} (${c.time_s}s): ${c.car_a} vs ${c.car_b}`;
+        marker.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.seekToStep(c.step);
+        });
+        this.dom.timelineMarkersContainer.appendChild(marker);
+      });
+    }
+
+    // Capture parameters (?capture=1&frame=N&camera=3)
     if (this.urlParams.get('capture') === '1') {
       if (this.dom.startGantryModal) this.dom.startGantryModal.classList.add('hidden');
       this.isManualStartPending = false;
@@ -255,7 +534,7 @@ class ReplayApp {
       window.__FRAME_RENDERED = true;
     }
 
-    // Expose frame seeking API for automation / video3d
+    // Frame seeking API for automation / video3d
     window.seekFrame = (step, camMode) => {
       if (this.dom.startGantryModal) this.dom.startGantryModal.classList.add('hidden');
       this.isManualStartPending = false;
@@ -294,12 +573,10 @@ class ReplayApp {
 
       if (currentLamp === 5) {
         clearInterval(interval);
-        // Random pause between 0.8s and 1.6s
         const randomHoldMs = 800 + Math.random() * 800;
         this.dom.gantryStatusText.innerText = 'HOLDING FOR LIGHTS OUT...';
 
         setTimeout(() => {
-          // LIGHTS OUT!
           this.setGantryLampUI(0, true);
           this.scene.setStartLights(0, true);
           this.dom.gantryStatusText.innerText = 'LIGHTS OUT AND AWAY WE GO!';
@@ -340,6 +617,7 @@ class ReplayApp {
   }
 
   togglePlayPause() {
+    if (this.isLiveMode) return;
     if (this.isManualStartPending) {
       this.triggerManualStartSequence();
       return;
@@ -348,125 +626,77 @@ class ReplayApp {
     this.dom.btnPlayPause.innerText = this.isPlaying ? '⏸️ Pause' : '▶️ Play';
   }
 
-  renderTimingTower() {
-    if (!this.replayData || !this.replayData.drivers) return;
-    this.dom.timingTower.innerHTML = '';
-
-    this.replayData.drivers.forEach((d, idx) => {
-      const row = document.createElement('div');
-      row.className = `driver-row ${d.id === this.focusedCarId ? 'active' : ''}`;
-      row.dataset.carId = d.id;
-
-      row.innerHTML = `
-        <span class="driver-pos">${idx + 1}</span>
-        <div class="driver-stripe" style="background: ${d.color};"></div>
-        <div class="driver-info">
-          <span class="driver-code">${d.code}</span>
-          <span class="driver-name-sub">${d.name} (${d.team})</span>
-        </div>
-        <div class="driver-gap" id="gap-${d.id}">${idx === 0 ? 'LEADER' : '+0.00s'}</div>
-      `;
-
-      // CRITICAL FIX: Clicking driver switches focus without resetting playback time
-      row.addEventListener('click', () => {
-        this.focusedCarId = d.id;
-        document.querySelectorAll('.driver-row').forEach((r) => r.classList.remove('active'));
-        row.classList.add('active');
-        this.updateHUD();
-      });
-
-      this.dom.timingTower.appendChild(row);
-    });
-  }
-
-  openGridModal() {
-    if (!this.replayData || !this.replayData.drivers) return;
-    this.dom.gridModal.classList.remove('hidden');
-    this.dom.gridSlotsContainer.innerHTML = '';
-
-    this.replayData.drivers.forEach((d, i) => {
-      const item = document.createElement('div');
-      item.className = 'grid-slot-item';
-      item.innerHTML = `
-        <span class="slot-badge">P${i + 1}</span>
-        <div class="slot-color" style="background: ${d.color};"></div>
-        <span class="slot-code">${d.code}</span>
-        <span class="slot-name">${d.name}</span>
-      `;
-      this.dom.gridSlotsContainer.appendChild(item);
-    });
-  }
-
-  showRaceControlNotice(type, text) {
-    if (!this.dom.raceControlBanner) return;
-    this.dom.rcText.innerText = text;
-    this.dom.raceControlBanner.classList.remove('hidden');
-    clearTimeout(this.rcTimeout);
-    this.rcTimeout = setTimeout(() => {
-      this.dom.raceControlBanner.classList.add('hidden');
-    }, 4500);
-  }
-
   updateCars(stepFloat) {
     if (!this.replayData || !this.replayData.cars) return;
-
     const baseStep = Math.floor(stepFloat);
+    const alpha = stepFloat - baseStep;
     const nextStep = Math.min(this.maxSteps, baseStep + 1);
-    const frac = stepFloat - baseStep;
 
     for (const [cid, car] of Object.entries(this.cars)) {
       const traj = this.replayData.cars[cid];
-      if (!traj || !traj.x || baseStep >= traj.x.length) continue;
+      if (!traj || baseStep >= traj.x.length) continue;
 
-      // Linear interpolation between frame states
-      const x = traj.x[baseStep] * (1.0 - frac) + (traj.x[nextStep] || traj.x[baseStep]) * frac;
-      const y = traj.y[baseStep] * (1.0 - frac) + (traj.y[nextStep] || traj.y[baseStep]) * frac;
-      const speed = traj.speed[baseStep] * (1.0 - frac) + (traj.speed[nextStep] || traj.speed[baseStep]) * frac;
-      const steer = traj.steer[baseStep] * (1.0 - frac) + (traj.steer[nextStep] || traj.steer[baseStep]) * frac;
-      const gas = traj.gas[baseStep] * (1.0 - frac) + (traj.gas[nextStep] || traj.gas[baseStep]) * frac;
-      const brake = traj.brake[baseStep] * (1.0 - frac) + (traj.brake[nextStep] || traj.brake[baseStep]) * frac;
-      const lateralG = traj.lateral_g[baseStep] * (1.0 - frac) + (traj.lateral_g[nextStep] || traj.lateral_g[baseStep]) * frac;
+      const x = traj.x[baseStep] * (1.0 - alpha) + (traj.x[nextStep] || traj.x[baseStep]) * alpha;
+      const y = traj.y[baseStep] * (1.0 - alpha) + (traj.y[nextStep] || traj.y[baseStep]) * alpha;
 
-      // Heading angle unwrapped slerp
-      const h1 = traj.heading[baseStep];
-      const h2 = traj.heading[nextStep] !== undefined ? traj.heading[nextStep] : h1;
-      let dh = h2 - h1;
-      while (dh > Math.PI) dh -= 2 * Math.PI;
-      while (dh < -Math.PI) dh += 2 * Math.PI;
-      const heading = h1 + dh * frac;
+      let hullAngle = 0.0;
+      if (traj.hull_angle && traj.hull_angle[baseStep] !== undefined) {
+        hullAngle = traj.hull_angle[baseStep] * (1.0 - alpha) + (traj.hull_angle[nextStep] || traj.hull_angle[baseStep]) * alpha;
+      } else {
+        const heading = traj.heading[baseStep] * (1.0 - alpha) + (traj.heading[nextStep] || traj.heading[baseStep]) * alpha;
+        hullAngle = heading - Math.PI / 2;
+      }
 
-      const ha1 = traj.hull_angle[baseStep];
-      const ha2 = traj.hull_angle[nextStep] !== undefined ? traj.hull_angle[nextStep] : ha1;
-      let dha = ha2 - ha1;
-      while (dha > Math.PI) dha -= 2 * Math.PI;
-      while (dha < -Math.PI) dha += 2 * Math.PI;
-      const hullAngle = ha1 + dha * frac;
+      const steer = traj.steer[baseStep] || 0.0;
+      const gas = traj.gas[baseStep] || 0.0;
+      const brake = traj.brake[baseStep] || 0.0;
+      const speed = traj.speed[baseStep] || 0.0;
+      const latG = (traj.lateral_g && traj.lateral_g[baseStep] !== undefined) ? traj.lateral_g[baseStep] : 0.0;
 
-      const state = {
-        x,
-        y,
-        heading,
-        hull_angle: hullAngle,
-        speed,
-        steer,
-        gas,
-        brake,
-        lateral_g: lateralG,
-        wheels: traj.wheels[baseStep] || [true, true, true, true],
-        progress: traj.progress[baseStep] || 0.0,
-        lap: traj.lap[baseStep] || 1,
-      };
-
-      car.update(state, 0.02);
+      car.update(x, y, hullAngle, steer, gas, brake, speed, latG);
     }
+  }
+
+  renderTimingTower() {
+    const list = this.dom.timingTower;
+    if (!list || !this.replayData || !this.replayData.drivers) return;
+    list.innerHTML = '';
+
+    this.replayData.drivers.forEach((d, idx) => {
+      const row = document.createElement('div');
+      row.className = `driver-row ${d.id === this.focusedCarId ? 'focused' : ''}`;
+      row.dataset.carId = d.id;
+
+      row.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.focusedCarId = d.id;
+        document.querySelectorAll('.driver-row').forEach((r) => r.classList.remove('focused'));
+        row.classList.add('focused');
+      });
+
+      const paceVarianceHtml = d.pace_variance
+        ? `<span style="color: var(--text-muted); font-size: 0.68rem; margin-left: 4px;">(${d.pace_variance})</span>`
+        : '';
+
+      row.innerHTML = `
+        <span class="driver-pos">${idx + 1}</span>
+        <span class="driver-bar" style="background-color: ${d.color};"></span>
+        <div class="driver-info">
+          <div class="driver-code">${d.code} ${paceVarianceHtml}</div>
+          <div class="driver-team">${d.team}</div>
+        </div>
+        <div class="driver-gap">-</div>
+      `;
+      list.appendChild(row);
+    });
   }
 
   updateHUD() {
     if (!this.replayData || !this.focusedCarId) return;
-
-    const baseStep = Math.min(this.maxSteps, Math.floor(this.currentStep));
     const traj = this.replayData.cars[this.focusedCarId];
-    if (!traj || baseStep >= traj.x.length) return;
+    if (!traj) return;
+
+    const baseStep = Math.floor(this.currentStep);
 
     // Scrubber update
     if (this.maxSteps > 0) {
@@ -492,7 +722,7 @@ class ReplayApp {
 
     const steerVal = traj.steer[baseStep] || 0.0;
     this.dom.telemetrySteer.innerText = (steerVal > 0 ? '+' : '') + steerVal.toFixed(2);
-    const steerPct = (steerVal + 1.0) * 50.0; // 0..100%
+    const steerPct = (steerVal + 1.0) * 50.0;
     this.dom.barSteer.style.width = `${steerPct}%`;
 
     const prog = traj.progress[baseStep] || 0.0;
@@ -511,25 +741,58 @@ class ReplayApp {
       }
     });
 
-    // Check race control events at current step
+    // Check race control events
     (this.replayData.events || []).forEach((ev) => {
       if (Math.abs(ev.step - baseStep) <= 2) {
         this.showRaceControlNotice(ev.type, ev.text);
       }
     });
 
-    // Update Minimap Dots
+    // Cosmetic collision sparks and camera shake on contact
+    if (this.replayData && this.replayData.contacts) {
+      this.replayData.contacts.forEach((c) => {
+        if (Math.abs(c.step - baseStep) <= 1 && c.step !== this._lastSparkStep) {
+          this._lastSparkStep = c.step;
+          const car = this.cars[c.car_a] || this.cars[c.car_b];
+          if (car) {
+            this.scene.emitSparks(car.root.position, 35);
+          }
+          this.cameraDirector.addTrauma(0.55);
+        }
+      });
+    }
+
+    // Session-end countdown banner check
+    if (this.dom.sessionCountdownBanner && this.maxSteps > 750) {
+      const cooldownStart = this.maxSteps - 750;
+      if (baseStep >= cooldownStart && baseStep < this.maxSteps) {
+        const remSteps = this.maxSteps - baseStep;
+        const remSec = Math.ceil(remSteps / 50);
+        this.dom.sessionCountdownBanner.innerText = `SESSION ENDS IN 00:${String(remSec).padStart(2, '0')}`;
+        this.dom.sessionCountdownBanner.classList.remove('hidden');
+      } else {
+        this.dom.sessionCountdownBanner.classList.add('hidden');
+      }
+    }
+
     this.updateMinimapDots(baseStep);
+  }
+
+  showRaceControlNotice(level, text) {
+    if (!this.dom.raceControlBanner || !this.dom.rcText) return;
+    this.dom.rcText.innerText = text;
+    this.dom.raceControlBanner.classList.remove('hidden');
+
+    clearTimeout(this.rcTimeout);
+    this.rcTimeout = setTimeout(() => {
+      this.dom.raceControlBanner.classList.add('hidden');
+    }, 4500);
   }
 
   drawMinimapTrack(trackData) {
     const canvas = this.dom.minimapCanvas;
     if (!canvas || !trackData || !trackData.centerline) return;
-    const ctx = canvas.getContext('2d');
-    const w = canvas.width;
-    const h = canvas.height;
 
-    // Find bounding box
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
     trackData.centerline.forEach((p) => {
       minX = Math.min(minX, p[0]);
@@ -538,14 +801,15 @@ class ReplayApp {
       maxZ = Math.max(maxZ, -p[1]);
     });
 
-    const pad = 18;
-    const scaleX = (w - pad * 2) / (maxX - minX);
-    const scaleZ = (h - pad * 2) / (maxZ - minZ);
+    const w = canvas.width;
+    const h = canvas.height;
+    const pad = 16;
+    const scaleX = (w - pad * 2) / (maxX - minX || 1);
+    const scaleZ = (h - pad * 2) / (maxZ - minZ || 1);
     this.mmScale = Math.min(scaleX, scaleZ);
     this.mmOffsetX = (w - (maxX - minX) * this.mmScale) / 2 - minX * this.mmScale;
     this.mmOffsetZ = (h - (maxZ - minZ) * this.mmScale) / 2 - minZ * this.mmScale;
 
-    // Cache static track path
     this.mmTrackCanvas = document.createElement('canvas');
     this.mmTrackCanvas.width = w;
     this.mmTrackCanvas.height = h;
@@ -570,7 +834,6 @@ class ReplayApp {
     mctx.lineWidth = 4;
     mctx.stroke();
 
-    // Checkered Start / Finish Marker
     if (trackData.start_finish && trackData.start_finish.p1) {
       const sfX = trackData.start_finish.p1[0] * this.mmScale + this.mmOffsetX;
       const sfZ = (-trackData.start_finish.p1[1]) * this.mmScale + this.mmOffsetZ;
@@ -588,7 +851,6 @@ class ReplayApp {
 
     ctx.drawImage(this.mmTrackCanvas, 0, 0);
 
-    // Draw each car dot
     for (const [cid, car] of Object.entries(this.cars)) {
       const traj = this.replayData.cars[cid];
       if (!traj || step >= traj.x.length) continue;
@@ -624,7 +886,7 @@ class ReplayApp {
     const dt = Math.min(0.1, (timestamp - this.lastTime) / 1000);
     this.lastTime = timestamp;
 
-    if (this.isPlaying && !this.isManualStartPending) {
+    if (this.isPlaying && !this.isManualStartPending && !this.isLiveMode) {
       this.currentStep += 50 * dt * this.playbackSpeed;
       if (this.currentStep >= this.maxSteps) {
         this.currentStep = this.maxSteps;
@@ -634,6 +896,9 @@ class ReplayApp {
       this.updateCars(this.currentStep);
       this.updateHUD();
     }
+
+    // Update cosmetic collision sparks
+    this.scene.updateSparks(dt);
 
     // Camera follow & render
     if (this.focusedCarId && this.cars[this.focusedCarId]) {

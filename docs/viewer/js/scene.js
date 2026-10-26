@@ -31,6 +31,7 @@ export class TrackScene {
     this.scene.add(this.carsGroup);
 
     this.startLights = [];
+    this.sparksList = [];
     this.setupLighting();
     this.setupEnvironment();
   }
@@ -472,5 +473,57 @@ export class TrackScene {
 
   onResize() {
     this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+  }
+
+  emitSparks(position, count = 25) {
+    // Cosmetic collision sparks
+    const geom = new THREE.BufferGeometry();
+    const positions = new Float32Array(count * 3);
+    const velocities = [];
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = position.x;
+      positions[i * 3 + 1] = position.y + 0.3;
+      positions[i * 3 + 2] = position.z;
+      velocities.push(new THREE.Vector3(
+        (Math.random() - 0.5) * 8.0,
+        Math.random() * 6.0 + 2.0,
+        (Math.random() - 0.5) * 8.0
+      ));
+    }
+    geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const mat = new THREE.PointsMaterial({
+      color: 0xffaa00,
+      size: 0.45,
+      transparent: true,
+      opacity: 1.0,
+      blending: THREE.AdditiveBlending,
+    });
+    const pSystem = new THREE.Points(geom, mat);
+    this.scene.add(pSystem);
+    this.sparksList.push({ points: pSystem, velocities: velocities, age: 0, maxAge: 0.45 });
+  }
+
+  updateSparks(dt = 0.02) {
+    for (let i = this.sparksList.length - 1; i >= 0; i--) {
+      const s = this.sparksList[i];
+      s.age += dt;
+      if (s.age >= s.maxAge) {
+        this.scene.remove(s.points);
+        s.points.geometry.dispose();
+        s.points.material.dispose();
+        this.sparksList.splice(i, 1);
+        continue;
+      }
+      const posAttr = s.points.geometry.attributes.position;
+      const arr = posAttr.array;
+      for (let j = 0; j < s.velocities.length; j++) {
+        arr[j * 3] += s.velocities[j].x * dt;
+        arr[j * 3 + 1] += s.velocities[j].y * dt;
+        arr[j * 3 + 2] += s.velocities[j].z * dt;
+        s.velocities[j].y -= 9.8 * dt; // Gravity
+      }
+      posAttr.needsUpdate = true;
+      s.points.material.opacity = 1.0 - (s.age / s.maxAge);
+    }
   }
 }

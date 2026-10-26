@@ -105,6 +105,73 @@
       text-transform: uppercase;
     }
 
+    .badge-mode {
+      font-family: 'BigShoulders', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+    }
+    .badge-mode.live {
+      background: rgba(255, 23, 68, 0.25);
+      border-color: #ff1744;
+      color: #ff1744;
+      box-shadow: 0 0 12px rgba(255, 23, 68, 0.6);
+      animation: pulse-live 1.5s infinite;
+    }
+    @keyframes pulse-live {
+      0% { opacity: 1; }
+      50% { opacity: 0.65; }
+      100% { opacity: 1; }
+    }
+    .session-countdown {
+      background: rgba(255, 23, 68, 0.92);
+      color: white;
+      font-family: 'BigShoulders', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      padding: 6px 16px;
+      border-radius: 8px;
+      box-shadow: 0 0 20px rgba(255, 23, 68, 0.8);
+      animation: pulse-live 1s infinite;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .session-countdown.hidden { display: none; }
+    .scrubber-wrapper {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+    .timeline-marker {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 4px;
+      height: 14px;
+      background: #ffd600;
+      border-radius: 2px;
+      pointer-events: auto;
+      cursor: pointer;
+      z-index: 10;
+      transition: transform 0.15s ease;
+    }
+    .timeline-marker:hover {
+      transform: translateY(-50%) scaleY(1.4);
+      background: #ff1744;
+    }
+    .timeline-marker.penalty {
+      background: #ff1744;
+      box-shadow: 0 0 6px #ff1744;
+    }
+
     .header-actions {
       display: flex;
       align-items: center;
@@ -599,6 +666,7 @@
   <header>
     <div class="brand-group">
       <div class="badge-3d">F1 3D</div>
+      <div id="live-badge" class="badge-mode">REPLAY</div>
       <div class="brand-title">AUTONOMOUS GRAND PRIX</div>
       <div class="disclaimer-pill">3D VISUALISATION · SIM PHYSICS IS 2D</div>
     </div>
@@ -701,6 +769,11 @@
 
     </div>
 
+    <!-- Session Countdown Banner -->
+    <div id="session-countdown-banner" class="session-countdown hidden">
+      SESSION ENDS IN 00:15
+    </div>
+
     <!-- Race Control Notice Banner -->
     <div id="race-control-banner" class="hidden">
       <span class="rc-badge">RACE CONTROL</span>
@@ -731,7 +804,10 @@
     <button class="btn-primary" id="btn-play-pause">▶️ Play</button>
 
     <div class="timeline-group">
-      <input type="range" id="time-scrubber" min="0" max="100" value="0" step="0.1">
+      <div class="scrubber-wrapper">
+        <input type="range" id="time-scrubber" min="0" max="100" value="0" step="0.1">
+        <div id="timeline-markers-container"></div>
+      </div>
       <span class="time-readout" id="current-time">00:00 / 00:00</span>
     </div>
 

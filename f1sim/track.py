@@ -131,6 +131,7 @@ class WindowedProgressTracker:
         self.progress_pct = 0.0
         self.laps_completed = 0
         self.has_started = False
+        self.passed_halfway = False
         self._prev_tile = 0
 
     def update(self, x, y):
@@ -140,8 +141,8 @@ class WindowedProgressTracker:
             (best_tile_idx, norm_dist, lap_finished)
         """
         pos = (x, y)
-        bw = 6 if self.has_started else 25
-        fw = 20 if self.has_started else 35
+        bw = 6 if self.has_started else 30
+        fw = 20 if self.has_started else 45
         best_tile = self.track_geom.find_nearest_tile_windowed(
             pos, self.current_tile, backward_window=bw, forward_window=fw
         )
@@ -149,15 +150,21 @@ class WindowedProgressTracker:
 
         lap_finished = False
         n = self.track_geom.num_tiles
+
+        # Require traversing past halfway through the circuit before lap can finish
+        if best_tile >= int(n * 0.50) and best_tile <= int(n * 0.85):
+            self.passed_halfway = True
+
         # Crossing start/finish line: from high tile (near end) to low tile (near 0)
-        if self.has_started and self._prev_tile > int(n * 0.70) and best_tile < int(n * 0.25):
+        if self.passed_halfway and self._prev_tile > int(n * 0.70) and best_tile < int(n * 0.25):
             lap_finished = True
             self.laps_completed += 1
+            self.passed_halfway = False
 
-        if best_tile > 5:
+        if 5 < best_tile < int(n * 0.50):
             self.has_started = True
 
-        self._prev_tile = self.current_tile
+        self._prev_tile = best_tile
         self.current_tile = best_tile
 
         abs_dist, _ = self.track_geom.compute_centre_line_distance(pos, best_tile)

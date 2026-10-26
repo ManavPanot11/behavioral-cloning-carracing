@@ -46,8 +46,24 @@ def main():
     parser_vid.add_argument("--duration", type=float, default=35.0, help="Duration in seconds")
     parser_vid.add_argument("--start-step", type=int, default=0, help="Starting step")
     parser_vid.add_argument("--screenshots", action="store_true", help="Generate 6 showcase screenshots")
-    parser_vid.add_argument("--benchmark", action="store_true", help="Run WebGL performance benchmark")
     parser_vid.add_argument("--port", type=int, default=8080, help="Local HTTP server port")
+
+    # live command
+    parser_live = subparsers.add_parser("live", help="Launch live interactive race streaming to 3D viewer")
+    parser_live.add_argument("--seed", type=str, default="random", help="Track seed (integer >= 6000 or 'random')")
+    parser_live.add_argument("--laps", type=int, default=3, help="Number of laps to race")
+    parser_live.add_argument("--traffic", type=str, default="contact", choices=["contact", "follow"], help="Traffic mode")
+    parser_live.add_argument("--pace-variance", type=float, default=0.03, help="Per-driver pace variance (0.03 for ±3%, 0 to disable)")
+    parser_live.add_argument("--port", type=int, default=8080, help="Local HTTP static server port")
+    parser_live.add_argument("--ws-port", type=int, default=8765, help="WebSocket streaming port")
+    parser_live.add_argument("--out", type=str, default=None, help="Path to save replay at conclusion")
+    parser_live.add_argument("--no-browser", action="store_true", help="Do not automatically open browser")
+
+    # make_replays command
+    parser_mr = subparsers.add_parser("make_replays", help="Generate N diverse replays and index.json catalog")
+    parser_mr.add_argument("--n", type=int, default=8, help="Number of replays to generate (default: 8)")
+    parser_mr.add_argument("--laps", type=int, default=3, help="Number of laps per replay")
+    parser_mr.add_argument("--out-dir", type=str, default="docs/viewer/data", help="Output directory for replays")
 
     args = parser.parse_args()
 
@@ -122,6 +138,21 @@ def main():
                 start_step=args.start_step,
                 port=args.port,
             )
+    elif args.command == "live":
+        from f1sim.live import run_live_race
+        run_live_race(
+            seed=args.seed,
+            laps=args.laps,
+            traffic=args.traffic,
+            pace_variance=args.pace_variance,
+            http_port=args.port,
+            ws_port=args.ws_port,
+            out_path=args.out,
+            open_browser=not args.no_browser,
+        )
+    elif args.command == "make_replays":
+        from f1sim.live import make_replays
+        make_replays(n=args.n, laps=args.laps, out_dir=args.out_dir)
     else:
         parser.print_help()
 

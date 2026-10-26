@@ -1,10 +1,100 @@
-[
-  {
-    "id": "race_3003",
-    "name": "Showcase Grand Prix — Seed 3003 (6 Cars, 2 Laps)",
-    "file": "data/race_3003.json",
-    "seed": 3003,
-    "laps": 2,
-    "cars": 6
-  }
-]
+{
+  "replays": [
+    {
+      "id": "race_3000",
+      "file": "data/race_3000.json",
+      "name": "Grand Prix \u2014 Seed 3000 (1 Laps)",
+      "seed": 3000,
+      "laps": 1,
+      "winner": "---",
+      "winner_team": "---",
+      "fastest_lap": "---",
+      "contacts": 2,
+      "duration_s": 72.54
+    },
+    {
+      "id": "race_3001",
+      "file": "data/race_3001.json",
+      "name": "Grand Prix \u2014 Seed 3001 (1 Laps)",
+      "seed": 3001,
+      "laps": 1,
+      "winner": "---",
+      "winner_team": "---",
+      "fastest_lap": "---",
+      "contacts": 1,
+      "duration_s": 80.02
+    },
+    {
+      "id": "race_3002",
+      "file": "data/race_3002.json",
+      "name": "Grand Prix \u2014 Seed 3002 (1 Laps)",
+      "seed": 3002,
+      "laps": 1,
+      "winner": "---",
+      "winner_team": "---",
+      "fastest_lap": "---",
+      "contacts": 4,
+      "duration_s": 80.02
+    },
+    {
+      "id": "race_3003",
+      "file": "data/race_3003.json",
+      "name": "Grand Prix \u2014 Seed 3003 (1 Laps)",
+      "seed": 3003,
+      "laps": 1,
+      "winner": "Alex Vance",
+      "winner_team": "APX",
+      "fastest_lap": "21.960",
+      "contacts": 0,
+      "duration_s": 246.04
+    },
+    {
+      "id": "race_6001",
+      "file": "data/race_6001.json",
+      "name": "Grand Prix \u2014 Seed 6001 (1 Laps)",
+      "seed": 6001,
+      "laps": 1,
+      "winner": "---",
+      "winner_team": "---",
+      "fastest_lap": "---",
+      "contacts": 4,
+      "duration_s": 32.48
+    },
+    {
+      "id": "race_6002",
+      "file": "data/race_6002.json",
+      "name": "Grand Prix \u2014 Seed 6002 (1 Laps)",
+      "seed": 6002,
+      "laps": 1,
+      "winner": "---",
+      "winner_team": "---",
+      "fastest_lap": "---",
+      "contacts": 3,
+      "duration_s": 80.02
+    },
+    {
+      "id": "race_6003",
+      "file": "data/race_6003.json",
+      "name": "Grand Prix \u2014 Seed 6003 (1 Laps)",
+      "seed": 6003,
+      "laps": 1,
+      "winner": "---",
+      "winner_team": "---",
+      "fastest_lap": "---",
+      "contacts": 0,
+      "duration_s": 34.48
+    },
+    {
+      "id": "race_6004",
+      "file": "data/race_6004.json",
+      "name": "Grand Prix \u2014 Seed 6004 (1 Laps)",
+      "seed": 6004,
+      "laps": 1,
+      "winner": "---",
+      "winner_team": "---",
+      "fastest_lap": "---",
+      "contacts": 1,
+      "duration_s": 76.86
+    }
+  ]
+}

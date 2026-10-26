@@ -15,6 +15,7 @@ Key Architecture:
 import math
 import os
 import time
+import random
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Any
 
@@ -155,6 +156,7 @@ class MultiCarWorld:
         fps: float = 50.0,
         stewards_config: Optional[RulesConfig] = None,
         lights_hold_steps: int = 50,
+        pace_variance: float = 0.0,
     ):
         validate_seed(track_seed)
         self.track_seed = track_seed
@@ -163,7 +165,24 @@ class MultiCarWorld:
         self.fps = fps
         self.specs = car_specs or SIX_CAR_SPECS
         self.num_cars = len(self.specs)
-        self.lights_hold_steps = lights_hold_steps
+        
+        # RNG for deterministic variety (lights hold and pace variance)
+        rng = random.Random(track_seed)
+        if lights_hold_steps is None or lights_hold_steps <= 0:
+            hold_sec = rng.uniform(0.5, 3.0)
+            self.lights_hold_steps = int(hold_sec * fps)
+        else:
+            self.lights_hold_steps = lights_hold_steps
+
+        self.pace_variance = pace_variance
+        self.pace_multipliers: Dict[str, float] = {}
+        for spec in self.specs:
+            cid = spec["id"]
+            if pace_variance > 0.0:
+                delta = rng.uniform(-pace_variance, pace_variance)
+            else:
+                delta = 0.0
+            self.pace_multipliers[cid] = 1.0 + delta
 
         # Systems
         self.timing = TimingSystem(fps=int(fps), num_checkpoints=100)
@@ -420,7 +439,8 @@ class MultiCarWorld:
         for cid, car in self.cars.items():
             act = actions[cid]
             car.steer(-float(act[0]))
-            car.gas(float(act[1]))
+            pace_mult = self.pace_multipliers.get(cid, 1.0)
+            car.gas(float(np.clip(act[1] * pace_mult, 0.0, 1.0)))
             car.brake(float(act[2]))
             car.step(1.0 / self.fps)
 
@@ -504,7 +524,7 @@ class MultiCarWorld:
 
             # Stopped car on track check (>500 frames / 10s at speed < 0.2 m/s triggers DNF)
             if not is_pre_start and not has_finished and not is_dnf:
-                if speed < 0.2:
+                if speed < 0.8:
                     self.stopped_frames[cid] += 1
                     if self.stopped_frames[cid] >= 500:
                         steward_state.is_dnf = True
@@ -604,8 +624,9 @@ class MultiCarWorld:
             return False
 
         # Hard safety cap (generous cap against infinite loops)
-        if step >= 35000:
-            print("[WARN] Hard safety cap reached at 35,000 steps. Terminating session.")
+        hard_cap = max(4000, self.total_laps * 2500)
+        if step >= hard_cap:
+            print(f"[WARN] Hard safety cap reached at {hard_cap} steps. Terminating session.")
             return False
 
         return True
@@ -613,8 +634,8 @@ class MultiCarWorld:
     def _apply_follow_logic(self, my_cid: str, my_car: car_dynamics.Car, act: np.ndarray) -> np.ndarray:
         """Modulate speed in 'follow' traffic mode to prevent rear-ending."""
         my_x, my_y, my_heading, my_speed = get_car_state(my_car)
-        fwd = np.array([-math.sin(my_heading - math.pi / 2), math.cos(my_heading - math.pi / 2)])
-        right = np.array([math.cos(my_heading - math.pi / 2), math.sin(my_heading - math.pi / 2)])
+        fwd = np.array([math.cos(my_heading), math.sin(my_heading)])
+        right = np.array([math.sin(my_heading), -math.cos(my_heading)])
 
         steer, gas, brake = float(act[0]), float(act[1]), float(act[2])
 
@@ -627,12 +648,15 @@ class MultiCarWorld:
             d_lat = float(np.dot(rel, right))
 
             # Car ahead within forward cone
-            if 0.5 < d_fwd < 12.0 and abs(d_lat) < 3.0:
-                if d_fwd < 5.0 and my_speed > ospeed:
+            if 0.5 < d_fwd < 20.0 and abs(d_lat) < 3.2:
+                if d_fwd < 7.5:
                     gas = 0.0
-                    brake = float(min(0.7, 0.2 + (5.0 - d_fwd) * 0.1))
-                elif d_fwd < 9.0 and my_speed > ospeed:
-                    gas *= 0.5
+                    brake = 0.85
+                elif d_fwd < 13.0 and my_speed > ospeed:
+                    gas = 0.0
+                    brake = float(min(0.6, 0.2 + (13.0 - d_fwd) * 0.08))
+                elif d_fwd < 20.0 and my_speed > ospeed:
+                    gas *= 0.35
 
         return np.array([steer, gas, brake], dtype=np.float32)
 
@@ -658,8 +682,9 @@ class MultiCarWorld:
             # Vector from A to B
             vec_ab = np.array([xb - xa, yb - ya])
             dist = float(np.hypot(vec_ab[0], vec_ab[1]))
-            fwd_a = np.array([-math.sin(heada - math.pi / 2), math.cos(heada - math.pi / 2)])
-            fwd_b = np.array([-math.sin(headb - math.pi / 2), math.cos(headb - math.pi / 2)])
+
+            fwd_a = np.array([math.cos(heada), math.sin(heada)])
+            fwd_b = np.array([math.cos(headb), math.sin(headb)])
 
             dot_a = float(np.dot(vec_ab / max(dist, 1e-3), fwd_a))
             dot_b = float(np.dot(-vec_ab / max(dist, 1e-3), fwd_b))
@@ -756,6 +781,7 @@ class MultiCarWorld:
                 "color": team_info.get("hex", "#FFFFFF"),
                 "model": spec.get("model_file", "expert"),
                 "grid_pos": spec.get("grid_pos", 1),
+                "pace_variance": f"{(self.pace_multipliers.get(cid, 1.0) - 1.0)*100:+.1f}%",
             })
 
         payload = {

@@ -212,3 +212,23 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
   - `test_cooldown_countdown_events`: Cooldown broadcasts 1s interval countdown notifications.
   - `test_10_lap_race_longer_than_4_06`: 10-lap race past 12,302 steps (13,052 steps) executed without arbitrary timeout.
 - [x] Full Regression Suite: All 59 tests pass cleanly in 109.90s.
+
+### Shared-World Engine Phase 4: Live Telemetry Streaming & Replay Variety
+- [x] Live Telemetry & Streaming Server (`f1sim/live.py`, `f1sim/__main__.py`):
+  - Standalone RFC 6455 pure-Python WebSocket broadcaster (zero external dependencies) streaming 50 FPS telemetry packets to WebGL viewer.
+  - Integrated HTTP static server for local 3D viewer serving.
+  - CLI flags: `python -m f1sim live [--seed N|random] [--laps L] [--traffic contact|follow] [--pace-variance 0.03]`.
+  - Deterministic random seed generation ($\ge 6000$ when `random`), random lights-out hold (0.5–3.0s), and small per-driver pace variance ($\pm 3\%$, 0 to disable) seeded deterministically by track seed.
+  - Full replay JSON automatically exported at race conclusion.
+- [x] 6-Race Showcase Variety & Determinism (`tests/test_phase4_variety.py`):
+  - Verified 6 diverse showcase races across seeds 6001–6006 (durations: 32.5s, 80.0s, 34.5s, 76.9s, 40.4s, 80.0s; contacts: 0 to 4).
+  - Determinism verification: Seed 6001 executed twice produced bit-identical total steps (1,624), duration (32.48s), contacts count (4), and event logs.
+- [x] Hosted Site Catalog & Replay Generator (`python -m f1sim make_replays --n 8`):
+  - Generated 8 diverse replays into `docs/viewer/data/` (`race_3000.json` to `race_6004.json`), preserving showcase 10-lap Grand Prix `race_3003.json`.
+  - Created catalog `docs/viewer/data/index.json`.
+  - Updated 3D viewer (`docs/viewer/js/app.js` and `docs/viewer/index.html`) to pick a random replay per visit and populate replay select dropdown.
+- [x] Viewer HUD & Cosmetic Features:
+  - Dynamic `LIVE` / `REPLAY` mode badge (pulsing red during WebSocket stream).
+  - Session cooldown countdown banner (`SESSION ENDS IN 00:xx`).
+  - Contact markers plotted on timeline scrubber with click-to-seek functionality.
+  - Cosmetic collision sparks particle emitter in 3D scene and camera shake impulse.

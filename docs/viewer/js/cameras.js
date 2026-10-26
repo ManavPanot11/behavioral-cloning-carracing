@@ -52,7 +52,14 @@ export class CameraDirector {
     // Trackside cameras array
     this.tracksidePosts = [];
 
+    // Camera shake (cosmetic impact feedback)
+    this.trauma = 0.0;
+
     this.setupOrbitListeners();
+  }
+
+  addTrauma(amount = 0.5) {
+    this.trauma = Math.min(1.0, this.trauma + amount);
   }
 
   setupOrbitListeners() {
@@ -196,9 +203,17 @@ export class CameraDirector {
     // Smooth camera movement
     const smoothFactor = (this.currentMode === 2) ? 0.35 : 0.08;
     this.camPos.lerp(desiredPos, smoothFactor);
-    this.targetPos.lerp(desiredTarget, smoothFactor * 1.2);
-
     this.perspCam.position.copy(this.camPos);
+
+    // Apply cosmetic camera shake
+    if (this.trauma > 0.0) {
+      const shakeMag = this.trauma * this.trauma * 0.6;
+      this.perspCam.position.x += (Math.random() * 2 - 1) * shakeMag;
+      this.perspCam.position.y += (Math.random() * 2 - 1) * shakeMag * 0.5;
+      this.perspCam.position.z += (Math.random() * 2 - 1) * shakeMag;
+      this.trauma = Math.max(0.0, this.trauma - dt * 2.5);
+    }
+
     this.perspCam.lookAt(this.targetPos);
   }
 
