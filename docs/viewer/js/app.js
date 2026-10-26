@@ -112,8 +112,8 @@ class ReplayApp {
     // Scrubber
     this.dom.timeScrubber.addEventListener('input', (e) => {
       if (this.maxSteps > 0) {
-        this.currentStep = (parseFloat(e.target.value) / 100.0) * this.maxSteps;
-        this.updateHUD();
+        const step = (parseFloat(e.target.value) / 100.0) * this.maxSteps;
+        this.seekToStep(step);
       }
     });
 
@@ -245,14 +245,38 @@ class ReplayApp {
 
     // Check for deterministic capture parameters (?capture=1&frame=N&camera=3)
     if (this.urlParams.get('capture') === '1') {
+      if (this.dom.startGantryModal) this.dom.startGantryModal.classList.add('hidden');
+      this.isManualStartPending = false;
       const targetFrame = parseInt(this.urlParams.get('frame') || '0');
       const camMode = parseInt(this.urlParams.get('camera') || '1');
       this.cameraDirector.setMode(camMode);
-      this.currentStep = targetFrame;
-      this.updateCars(this.currentStep);
-      this.cameraDirector.update(this.cars[this.focusedCarId], 0.02);
+      this.seekToStep(targetFrame);
       this.scene.renderer.render(this.scene.scene, this.cameraDirector.activeCamera);
       window.__FRAME_RENDERED = true;
+    }
+
+    // Expose frame seeking API for automation / video3d
+    window.seekFrame = (step, camMode) => {
+      if (this.dom.startGantryModal) this.dom.startGantryModal.classList.add('hidden');
+      this.isManualStartPending = false;
+      if (camMode !== undefined && camMode !== null) {
+        const cm = parseInt(camMode);
+        this.cameraDirector.setMode(cm);
+        this.updateActiveCameraButtons(cm);
+      }
+      this.seekToStep(step);
+      this.scene.renderer.render(this.scene.scene, this.cameraDirector.activeCamera);
+      window.__FRAME_RENDERED = true;
+      return true;
+    };
+  }
+
+  seekToStep(step) {
+    this.currentStep = Math.max(0, Math.min(this.maxSteps, step));
+    this.updateCars(this.currentStep);
+    this.updateHUD();
+    if (this.focusedCarId && this.cars[this.focusedCarId]) {
+      this.cameraDirector.update(this.cars[this.focusedCarId], 0.02);
     }
   }
 

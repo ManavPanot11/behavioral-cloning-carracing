@@ -36,6 +36,19 @@ def main():
     parser_exp.add_argument("--laps", type=int, default=2, help="Number of laps to race")
     parser_exp.add_argument("--out", type=str, default="docs/viewer/data/race_3003.json", help="Path to save 3D JSON")
 
+    # video3d command
+    parser_vid = subparsers.add_parser("video3d", help="Generate 3D WebGL replay video, GIF, or screenshots")
+    parser_vid.add_argument("--replay", type=str, default="docs/viewer/data/race_3003.json", help="Path to replay JSON")
+    parser_vid.add_argument("--out", type=str, default="docs/media/race3d.mp4", help="Output video or GIF path")
+    parser_vid.add_argument("--camera", type=str, default="mixed", choices=["mixed", "chase", "onboard", "tv", "topdown", "trackside", "orbit"], help="Camera mode")
+    parser_vid.add_argument("--size", type=str, default="1280x720", help="Resolution WxH")
+    parser_vid.add_argument("--fps", type=int, default=30, help="Frames per second")
+    parser_vid.add_argument("--duration", type=float, default=35.0, help="Duration in seconds")
+    parser_vid.add_argument("--start-step", type=int, default=0, help="Starting step")
+    parser_vid.add_argument("--screenshots", action="store_true", help="Generate 6 showcase screenshots")
+    parser_vid.add_argument("--benchmark", action="store_true", help="Run WebGL performance benchmark")
+    parser_vid.add_argument("--port", type=int, default=8080, help="Local HTTP server port")
+
     args = parser.parse_args()
 
     if args.command == "doctor":
@@ -89,6 +102,26 @@ def main():
         def on_progress(step, max_steps, p1):
             print(f"Step {step:4d} | Leader: {p1.get('code', '---')} | Laps: {p1.get('laps', 0)}/{args.laps} | Gap: {p1.get('gap', '-')}", flush=True)
         run_and_export_3d(track_seed=args.seed, total_laps=args.laps, out_path=args.out, progress_callback=on_progress)
+    elif args.command == "video3d":
+        from f1sim.video3d import measure_performance, capture_screenshots, generate_video
+        if args.benchmark:
+            measure_performance(replay_path=args.replay, port=args.port)
+        elif args.screenshots:
+            capture_screenshots(replay_path=args.replay, out_dir="docs/media", port=args.port)
+        else:
+            parts = args.size.lower().split("x")
+            w, h = int(parts[0]), int(parts[1])
+            generate_video(
+                replay_path=args.replay,
+                out_path=args.out,
+                camera_mode=args.camera,
+                target_width=w,
+                target_height=h,
+                fps=args.fps,
+                duration=args.duration,
+                start_step=args.start_step,
+                port=args.port,
+            )
     else:
         parser.print_help()
 

@@ -237,35 +237,14 @@ def run_and_export_3d(
     obs0, _ = ref_env.reset(seed=track_seed)
     track_geom = extract_track_geometry(ref_env)
     track_pts = np.array([[p[0], p[1]] for p in track_geom["centerline"]])
+    grid_boxes = track_geom["grid_boxes"]
 
-    # 3. Position cars on starting grid slots
-    grid_data = compute_staggered_grid_positions(track_pts, grid_slots=num_cars, spacing_meters=6.5, lateral_offset=1.75)
+    # 3. Initialize environments on track
     obs_dict = {}
-
     for i, spec in enumerate(specs):
         cid = spec["id"]
         env = envs[cid]
         obs, _ = env.reset(seed=track_seed)
-
-        # Reposition car to its starting grid slot
-        slot_info = grid_data[i]
-        gx, gy = slot_info["pos"]
-        gh = slot_info["heading"]
-
-        car = env.unwrapped.car
-        car.hull.position = (float(gx), float(gy))
-        car.hull.angle = float(gh)
-        car.hull.linearVelocity = (0.0, 0.0)
-        car.hull.angularVelocity = 0.0
-
-        for w, (wx, wy) in zip(car.wheels, WHEELPOS):
-            w.position = car.hull.GetWorldPoint((wx * SIZE, wy * SIZE))
-            w.angle = float(gh)
-            w.linearVelocity = (0.0, 0.0)
-            w.angularVelocity = 0.0
-
-        # Step 0 to settle Box2D contact fixtures
-        obs, _, _, _, _ = env.step(np.array([0.0, 0.0, 1.0], dtype=np.float32))
         obs_dict[cid] = obs
 
     # 4. Simulation Trajectory Storage
@@ -294,50 +273,85 @@ def run_and_export_3d(
 
     winner_id = None
     winner_finish_step = -1
-    max_steps = 6000
+    max_steps = 3500
 
     # 5. Main Race Simulation Loop
     for step in range(max_steps):
-        actions = {}
-        for cid, driver in drivers.items():
-            if stewards.states[cid].is_dnf:
-                actions[cid] = np.array([0.0, 0.0, 1.0], dtype=np.float32)
-                continue
-            if step < 50:
-                # Pre-start: stationary on grid holding brakes
-                actions[cid] = np.array([0.0, 0.0, 1.0], dtype=np.float32)
+        # Step each car
+        for i, (cid, env) in enumerate(envs.items()):
+            slot_info = grid_boxes[i]
+            gx, gy = slot_info["center"]
+            gh = slot_info["heading"]
+
+            launch_delay = i * 2  # 0 to 10 frames reaction time
+            launch_step = 50 + launch_delay
+
+            if step < launch_step:
+                # Pre-start: positioned in assigned starting grid slot holding brakes
+                car_x, car_y = gx, gy
+                heading = gh
+                hull_angle = gh
+                speed = 0.0
+                act = [0.0, 0.0, 1.0]
+                wheel_flags = [True, True, True, True]
+                progress_pct = 0.0
+                lap_num = 0
+                is_offroad = False
+                cdist = 0.0
+                lat_g = 0.0
+            elif timing.drivers[cid].laps_completed >= total_laps or stewards.states[cid].is_dnf:
+                # Finished race or retired: hold terminal state
+                traj = car_trajectories[cid]
+                car_x = traj["x"][-1]
+                car_y = traj["y"][-1]
+                heading = traj["heading"][-1]
+                hull_angle = traj["hull_angle"][-1]
+                speed = 0.0
+                act = [0.0, 0.0, 1.0]
+                wheel_flags = traj["wheels"][-1]
+                progress_pct = traj["progress"][-1]
+                lap_num = traj["lap"][-1]
+                is_offroad = traj["offroad"][-1]
+                cdist = traj["centre_dist"][-1]
+                lat_g = 0.0
             else:
-                actions[cid] = driver.act(obs_dict[cid], envs[cid], step=step)
+                # Normal simulation step
+                act = drivers[cid].act(obs_dict[cid], env, step=step)
+                obs, reward, terminated, truncated, info = env.step(act)
+                obs_dict[cid] = obs
 
-        # Step environments
-        for cid, env in envs.items():
-            if stewards.states[cid].is_dnf:
-                continue
+                car_x, car_y, heading, speed = get_car_state(env)
+                hull_angle = float(env.unwrapped.car.hull.angle)
+                uw_car = env.unwrapped.car
+                wheel_flags = [bool(len(w.tiles) > 0) for w in uw_car.wheels]  # FL, FR, RL, RR
+                on_track_wheels = sum(wheel_flags)
+                is_offroad = (on_track_wheels == 0)
 
-            act = actions[cid]
-            obs, reward, terminated, truncated, info = env.step(act)
-            obs_dict[cid] = obs
+                # Stewards rules check
+                stewards.check_step(step, cid, is_offroad, speed)
 
-            car_x, car_y, heading, speed = get_car_state(env)
-            hull_angle = float(env.unwrapped.car.hull.angle)
-            uw_car = env.unwrapped.car
-            wheel_flags = [bool(len(w.tiles) > 0) for w in uw_car.wheels]  # FL, FR, RL, RR
-            on_track_wheels = sum(wheel_flags)
-            is_offroad = (on_track_wheels == 0)
+                # Timing system
+                lap_finished = info.get("lap_finished", False)
+                progress_pct = info.get("progress_pct", 0.0)
+                timing.update_driver_progress(cid, current_step=step, progress_pct=progress_pct, lap_finished=lap_finished)
 
-            # Stewards rules check
-            stewards.check_step(step, cid, is_offroad, speed)
+                # Centre-line distance
+                diff = track_pts - np.array([car_x, car_y])
+                cdist = float(np.sqrt(np.min(np.sum(diff ** 2, axis=1))))
+                lat_g = round(float(abs(act[0]) * speed * 0.015), 2)
 
-            # Timing system
-            lap_finished = info.get("lap_finished", False)
-            progress_pct = info.get("progress_pct", 0.0)
-            timing.update_driver_progress(cid, current_step=step, progress_pct=progress_pct, lap_finished=lap_finished)
+                # Winner check
+                if timing.drivers[cid].laps_completed >= total_laps and winner_id is None:
+                    winner_id = cid
+                    winner_finish_step = step
+                    race_events.append({
+                        "step": step,
+                        "time": round(step / FPS, 2),
+                        "type": "chequered_flag",
+                        "text": f"CHEQUERED FLAG: {timing.drivers[cid].code} WINS THE GRAND PRIX!"
+                    })
 
-            # Centre-line distance
-            diff = track_pts - np.array([car_x, car_y])
-            cdist = float(np.sqrt(np.min(np.sum(diff ** 2, axis=1))))
-
-            # Store compact telemetry
+            # Record state
             traj = car_trajectories[cid]
             traj["x"].append(round(float(car_x), 3))
             traj["y"].append(round(float(car_y), 3))
@@ -352,18 +366,7 @@ def run_and_export_3d(
             traj["lap"].append(int(timing.drivers[cid].current_lap))
             traj["offroad"].append(is_offroad)
             traj["centre_dist"].append(round(float(cdist), 2))
-            traj["lateral_g"].append(round(float(abs(act[0]) * speed * 0.015), 2))
-
-            # Winner check
-            if timing.drivers[cid].laps_completed >= total_laps and winner_id is None:
-                winner_id = cid
-                winner_finish_step = step
-                race_events.append({
-                    "step": step,
-                    "time": round(step / FPS, 2),
-                    "type": "chequered_flag",
-                    "text": f"CHEQUERED FLAG: {timing.drivers[cid].code} WINS THE GRAND PRIX!"
-                })
+            traj["lateral_g"].append(round(float(lat_g), 2))
 
         # Append new steward events
         recent_notices = stewards.get_recent_notices(step, window_steps=1)
@@ -382,7 +385,7 @@ def run_and_export_3d(
             (timing.drivers[cid].laps_completed >= total_laps or stewards.states[cid].is_dnf)
             for cid in drivers
         )
-        if all_finished or (winner_id is not None and (step - winner_finish_step) >= 300):
+        if all_finished or (winner_id is not None and (step - winner_finish_step) >= 350):
             break
 
         if progress_callback and step % 250 == 0:

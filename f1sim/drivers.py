@@ -111,7 +111,7 @@ class ExpertDriver(Driver):
     """
 
     def __init__(self, name="Scripted Expert", code="EXP", team="ZEN",
-                 lookahead=11, gain=0.55, target_straight=70.0, target_turn=38.0):
+                 lookahead=5, gain=2.8, target_straight=70.0, target_turn=38.0):
         super().__init__(name=name, code=code, team=team)
         self.lookahead = lookahead
         self.gain = gain

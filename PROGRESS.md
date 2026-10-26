@@ -27,8 +27,8 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
 | **Phase 1** | Replay Export (`f1sim export3d`, 6 cars, wheel flags, coords) | **DONE** | 6-car grid expansion (APX, VEL, NDX, ZEN, RDR, ORB), 4-wheel track-limit flags, compact JSON exporter (`race_3003.json` at 0.79 MB < 6 MB), coordinate test on asymmetric track passes (det(R)=1.0). |
 | **Phase 2** | 3D Scene (`docs/viewer/index.html` + `js/`, Three.js r128 offline) | **DONE** | Night race with floodlights, procedural asphalt ribbon, red/white kerbs, single checkered line, 5-light start gantry, low-poly procedural F1 cars, 6 camera modes. Verified in browser subagent. |
 | **Phase 3** | Playback & HUD (Timing Tower, Grid Config, Manual Start) | **DONE** | Timing tower click-to-focus without time reset, grid position selector modal, manual 5-light FIA start sequence, telemetry HUD with $K=3.6$ note, responsive layouts tested. |
-| **Phase 4** | Deterministic Video & Media Capture (`video3d`) | **IN PROGRESS** | Frame-by-frame capture script, 20s hero GIF (<10MB), race video, screenshots on showcase seeds 3000-3019, frame time benchmark. |
-| **Phase 5** | Repository & README Update | **PLANNED** | Updated README with hero GIF, 3D viewer docs, GitHub Pages deployment guide, vendor MIT license, unit tests. |
+| **Phase 4** | Deterministic Video & Media Capture (`video3d`) | **DONE** | Frame-by-frame capture script (`f1sim/video3d.py`), 20s hero GIF (`docs/media/hero.gif` at 9.21 MB < 10 MB), race video (`docs/media/race3d.mp4` at 7.37 MB < 25 MB), 6 screenshots on showcase seed 3003, performance benchmark (0.435 ms/frame, >2200 FPS). |
+| **Phase 5** | Repository & README Update | **IN PROGRESS** | Updated README with hero GIF, 3D viewer docs, GitHub Pages deployment guide, vendor MIT license, unit tests. |
 
 ---
 
@@ -120,4 +120,22 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
 - [x] Telemetry HUD: Real speed with documented conversion ($K = 3.6$ km/h per world unit/s), throttle, brake, steering dial, and 4-wheel track-limit dots.
 - [x] Starting Grid Customizer: Modal allowing user to select starting positions and grid order for all 6 cars.
 - [x] Fixed 2D viewer `index.html` timing tower click bug via `loadedmetadata` event listener.
+
+### 3D Viewer Phase 4: Deterministic Video & Media Capture
+- [x] Implemented `f1sim/video3d.py` supporting deterministic frame stepping (?capture=1&frame=N&camera=C via `window.seekFrame`).
+- [x] Headless Chrome automation with WebGL via Selenium, capturing full DOM broadcast presentation.
+- [x] Generated `docs/media/race3d.mp4`: 1280x720 @ 30 fps, 35s duration, 1050 frames, 7.37 MB (< 25 MB limit).
+- [x] Generated `docs/media/hero.gif`: 800x450 @ 12 fps, 20s duration, 240 frames, 9.21 MB (< 10 MB limit) via ffmpeg palettegen.
+- [x] Captured 6 high-res showcase screenshots across all camera perspectives:
+  - `screen_01_grid_lights.png` (Starting grid & 5-light FIA gantry)
+  - `screen_02_chase_action.png` (Chase camera multi-car high-speed battle)
+  - `screen_03_onboard_cockpit.png` (Onboard nose-level cockpit view)
+  - `screen_04_tv_helicopter.png` (TV helicopter sweep over lead pack)
+  - `screen_05_topdown_seam.png` (Top-down orthographic view of single checkered line)
+  - `screen_06_trackside_handover.png` (Fixed trackside post camera handover)
+- [x] WebGL Performance Benchmark:
+  - Low Quality: 0.376 ms/frame (2,659 FPS), 236 draw calls, 19,076 triangles.
+  - Medium Quality: 0.435 ms/frame (2,298 FPS), 204 draw calls, 18,678 triangles.
+  - High Quality: 0.419 ms/frame (2,386 FPS), 200 draw calls, 18,630 triangles.
+
 
