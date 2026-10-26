@@ -500,7 +500,7 @@ class ReplayApp {
     this.dom.barProgress.style.width = `${prog}%`;
 
     const lapNum = traj.lap[baseStep] || 1;
-    this.dom.telemetryLap.innerText = `LAP ${lapNum}/${this.replayData.meta.total_laps || 2}`;
+    this.dom.telemetryLap.innerText = `LAP ${lapNum}/${this.replayData.meta.total_laps || 10}`;
 
     // 4-Wheel Track Limit Status Dots
     const wheels = traj.wheels[baseStep] || [true, true, true, true];

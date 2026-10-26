@@ -30,6 +30,7 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
 | **Phase 4** | Deterministic Video & Media Capture (`video3d`) | **DONE** | Frame-by-frame capture script (`f1sim/video3d.py`), 20s hero GIF (`docs/media/hero.gif` at 9.21 MB < 10 MB), race video (`docs/media/race3d.mp4` at 7.37 MB < 25 MB), 6 screenshots on showcase seed 3003, performance benchmark (0.435 ms/frame, >2200 FPS). |
 | **Phase 5** | Repository & README Update | **DONE** | Updated README with hero GIF, 3D viewer section, GitHub Pages deployment guide, vendor MIT license, docs/viewer/README.md, all 39 unit tests passing. |
 | **Deploy**  | Vercel Live Deployment (`behavioral-cloning-carracing.vercel.app`) | **LIVE & VERIFIED** | Merged `viewer-3d` to `main`, pushed to GitHub, `vercel.json` and client-side redirect route `/` to `/docs/viewer/`. Browser subagent verified 3D WebGL scene, timing tower, and manual start sequence live. |
+| **Fix/Laps**| Visible Track Mesh & 10-Lap Grand Prix Upgrade | **DONE & VERIFIED** | Fixed track asphalt normal inversion (CCW winding [0, +93.34, 0], DoubleSide, white edge boundaries); simulated & exported full 10-lap 6-car Grand Prix (12,302 steps, 246s, 7.54 MB). Verified in browser subagent. |
 
 ---
 

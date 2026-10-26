@@ -36,12 +36,12 @@ export class TrackScene {
   }
 
   setupLighting() {
-    // Ambient night moonlight
-    const ambient = new THREE.AmbientLight(0x1a243a, 0.85);
+    // Ambient night moonlight - clear visibility across entire circuit
+    const ambient = new THREE.AmbientLight(0x384666, 1.25);
     this.scene.add(ambient);
 
     // Moon / Directional Key Light
-    const moonLight = new THREE.DirectionalLight(0x7da2e8, 1.4);
+    const moonLight = new THREE.DirectionalLight(0x94b8ff, 1.65);
     moonLight.position.set(120, 250, 150);
     moonLight.castShadow = true;
     moonLight.shadow.mapSize.width = 2048;
@@ -118,15 +118,15 @@ export class TrackScene {
     canvas.height = 512;
     const ctx = canvas.getContext('2d');
 
-    // Asphalt dark base
-    ctx.fillStyle = '#22252a';
+    // Asphalt dark charcoal base
+    ctx.fillStyle = '#282c35';
     ctx.fillRect(0, 0, 512, 512);
 
     // Aggregate noise
     const imgData = ctx.getImageData(0, 0, 512, 512);
     const data = imgData.data;
     for (let i = 0; i < data.length; i += 4) {
-      const noise = (Math.random() - 0.5) * 26;
+      const noise = (Math.random() - 0.5) * 22;
       data[i] = Math.max(0, Math.min(255, data[i] + noise));
       data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise));
       data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise));
@@ -134,14 +134,14 @@ export class TrackScene {
     ctx.putImageData(imgData, 0, 0);
 
     // Faint dark racing grooves (rubbered in)
-    ctx.fillStyle = 'rgba(15, 17, 20, 0.45)';
-    ctx.fillRect(140, 0, 90, 512);
-    ctx.fillRect(282, 0, 90, 512);
+    ctx.fillStyle = 'rgba(15, 18, 22, 0.45)';
+    ctx.fillRect(130, 0, 100, 512);
+    ctx.fillRect(282, 0, 100, 512);
 
-    // Edge lines (clean white border)
-    ctx.fillStyle = 'rgba(240, 245, 255, 0.85)';
-    ctx.fillRect(8, 0, 10, 512);
-    ctx.fillRect(494, 0, 10, 512);
+    // Edge lines (crisp white borders)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.fillRect(0, 0, 18, 512);
+    ctx.fillRect(494, 0, 18, 512);
 
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.RepeatWrapping;
@@ -166,20 +166,20 @@ export class TrackScene {
 
     polygons.forEach((poly, polyIdx) => {
       // poly is 4 points: [(x1, y1), (x2, y2), (x3, y3), (x4, y4)]
-      // Sim to 3D mapping: (x, 0, -y)
-      const p1 = [poly[0][0], 0.02, -poly[0][1]];
-      const p2 = [poly[1][0], 0.02, -poly[1][1]];
-      const p3 = [poly[2][0], 0.02, -poly[2][1]];
-      const p4 = [poly[3][0], 0.02, -poly[3][1]];
+      // Sim to 3D mapping: (x, y=0.04, z=-y)
+      const p1 = [poly[0][0], 0.04, -poly[0][1]];
+      const p2 = [poly[1][0], 0.04, -poly[1][1]];
+      const p3 = [poly[2][0], 0.04, -poly[2][1]];
+      const p4 = [poly[3][0], 0.04, -poly[3][1]];
 
       const baseIdx = vertices.length / 3;
 
       vertices.push(...p1, ...p2, ...p3, ...p4);
       uvs.push(0, 0, 1, 0, 1, 1, 0, 1);
 
-      // Two triangles per quad
-      indices.push(baseIdx, baseIdx + 1, baseIdx + 2);
-      indices.push(baseIdx, baseIdx + 2, baseIdx + 3);
+      // Two triangles per quad with Counter-Clockwise (upward normal) winding
+      indices.push(baseIdx, baseIdx + 2, baseIdx + 1);
+      indices.push(baseIdx, baseIdx + 3, baseIdx + 2);
     });
 
     const roadGeo = new THREE.BufferGeometry();
@@ -190,12 +190,19 @@ export class TrackScene {
 
     const roadMat = new THREE.MeshStandardMaterial({
       map: asphaltTex,
-      roughness: 0.85,
-      metalness: 0.15,
+      roughness: 0.82,
+      metalness: 0.12,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
     });
     const roadMesh = new THREE.Mesh(roadGeo, roadMat);
     roadMesh.receiveShadow = true;
     this.trackGroup.add(roadMesh);
+
+    // Continuous Left and Right Track Boundary Lines
+    this.buildEdgeLines(trackData.left_edge || [], trackData.right_edge || []);
 
     // Build Single Start / Finish Checkered Line
     this.buildStartFinishLine(trackData.start_finish);
@@ -211,6 +218,26 @@ export class TrackScene {
 
     // Build Start Gantry with 5 LED Lights
     this.buildStartGantry(trackData.start_finish);
+  }
+
+  buildEdgeLines(leftEdge, rightEdge) {
+    if (leftEdge.length > 1) {
+      const leftPts = leftEdge.map(pt => new THREE.Vector3(pt[0], 0.045, -pt[1]));
+      leftPts.push(leftPts[0]); // Loop back
+      const leftGeo = new THREE.BufferGeometry().setFromPoints(leftPts);
+      const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+      const leftLine = new THREE.Line(leftGeo, edgeMat);
+      this.trackGroup.add(leftLine);
+    }
+
+    if (rightEdge.length > 1) {
+      const rightPts = rightEdge.map(pt => new THREE.Vector3(pt[0], 0.045, -pt[1]));
+      rightPts.push(rightPts[0]); // Loop back
+      const rightGeo = new THREE.BufferGeometry().setFromPoints(rightPts);
+      const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+      const rightLine = new THREE.Line(rightGeo, edgeMat);
+      this.trackGroup.add(rightLine);
+    }
   }
 
   buildStartFinishLine(sfData) {

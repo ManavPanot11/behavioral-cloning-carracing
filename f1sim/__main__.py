@@ -33,7 +33,7 @@ def main():
     # export3d command
     parser_exp = subparsers.add_parser("export3d", help="Run race and export 3D replay JSON for WebGL viewer")
     parser_exp.add_argument("--seed", type=int, default=3003, help="Showcase track seed (3000-3019)")
-    parser_exp.add_argument("--laps", type=int, default=2, help="Number of laps to race")
+    parser_exp.add_argument("--laps", type=int, default=10, help="Number of laps to race")
     parser_exp.add_argument("--out", type=str, default="docs/viewer/data/race_3003.json", help="Path to save 3D JSON")
 
     # video3d command

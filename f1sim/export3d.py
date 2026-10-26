@@ -194,7 +194,7 @@ def extract_track_geometry(ref_env):
 
 def run_and_export_3d(
     track_seed=3003,
-    total_laps=2,
+    total_laps=10,
     car_specs=None,
     out_path="docs/viewer/data/race_3003.json",
     progress_callback=None,
@@ -223,7 +223,7 @@ def run_and_export_3d(
         timing.register_driver(cid, code, name, team)
         stewards.register_car(cid, code)
 
-        env = make_env(seed=track_seed, max_steps=15000, render_mode="rgb_array", race_mode=True)
+        env = make_env(seed=track_seed, max_steps=max(15000, total_laps * 1600 + 1000), render_mode="rgb_array", race_mode=True)
         envs[cid] = env
 
         if spec["type"] == "expert":
@@ -273,7 +273,7 @@ def run_and_export_3d(
 
     winner_id = None
     winner_finish_step = -1
-    max_steps = 3500
+    max_steps = max(3500, total_laps * 1500 + 1000)
 
     # 5. Main Race Simulation Loop
     for step in range(max_steps):
@@ -353,20 +353,20 @@ def run_and_export_3d(
 
             # Record state
             traj = car_trajectories[cid]
-            traj["x"].append(round(float(car_x), 3))
-            traj["y"].append(round(float(car_y), 3))
-            traj["heading"].append(round(float(heading), 4))
-            traj["hull_angle"].append(round(float(hull_angle), 4))
-            traj["speed"].append(round(float(speed), 2))
-            traj["steer"].append(round(float(act[0]), 3))
-            traj["gas"].append(round(float(act[1]), 3))
-            traj["brake"].append(round(float(act[2]), 3))
+            traj["x"].append(round(float(car_x), 2))
+            traj["y"].append(round(float(car_y), 2))
+            traj["heading"].append(round(float(heading), 3))
+            traj["hull_angle"].append(round(float(hull_angle), 3))
+            traj["speed"].append(round(float(speed), 1))
+            traj["steer"].append(round(float(act[0]), 2))
+            traj["gas"].append(round(float(act[1]), 2))
+            traj["brake"].append(round(float(act[2]), 2))
             traj["wheels"].append(wheel_flags)
-            traj["progress"].append(round(float(progress_pct), 2))
+            traj["progress"].append(round(float(progress_pct), 1))
             traj["lap"].append(int(timing.drivers[cid].current_lap))
             traj["offroad"].append(is_offroad)
-            traj["centre_dist"].append(round(float(cdist), 2))
-            traj["lateral_g"].append(round(float(lat_g), 2))
+            traj["centre_dist"].append(round(float(cdist), 1))
+            traj["lateral_g"].append(round(float(lat_g), 1))
 
         # Append new steward events
         recent_notices = stewards.get_recent_notices(step, window_steps=1)
