@@ -14,11 +14,19 @@ build/
 # Large binary datasets (>65 MB)
 data/*.npz
 
-# Large raw test video (>345 MB, exceeds GitHub 100MB limit)
+# Videos over 25 MB and general video builds (allow hero showcase video & gif)
+videos/*.mp4
+!videos/f1_showcase_3003.mp4
 videos/test_2laps.mp4
+videos/race_10laps_f1.mp4
+videos/race_quad.mp4
 
 # Logs
-logs/*.log
+logs/
+*.log
+
+# Scratch files
+scratch_*
 
 # IDE & OS files
 .idea/
