@@ -155,6 +155,39 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
 - [x] Verified zero tracked files over 50 MB, video under 25 MB (`race3d.mp4` 7.37 MB), hero GIF under 10 MB (`hero.gif` 9.21 MB).
 - [x] Updated `.gitignore` to prevent temporary MP4s.
 - [x] All 39 unit tests in `tests/` pass cleanly.
+### Shared-World Engine Phase 0 & Phase 1: Failing Tests First & Repo Hygiene
+- [x] Switched to new dedicated branch: `shared-world`.
+- [x] Untracked `.agents/` (439 files) and 24 `scratch_*` files with `git rm --cached` without deleting local files.
+- [x] Added `.agents/`, `*.zip`, `rc/` to `.gitignore`.
+- [x] Audited model weights: All 22 `.keras` files verified at 2.73 MB each (< 5 MB target).
+- [x] Created `tests/test_findings_f1_f6.py` replicating F1-F6 as failing tests; verified 6 explicit assertion failures.
+- [x] Fixed F4 & F7 in `f1sim/drivers.py`:
+  - `ModelDriver` and `ExpertDriver` guard using `env.unwrapped.t < 1.0` or car's first 50 steps.
+  - `BatchedModelDriver` input normalized to float32 in [0, 255] without redundant `/ 255.0`.
+  - Removed torch-only `.detach().cpu().numpy()` in favor of framework-agnostic `keras.ops.convert_to_numpy`.
+- [x] Fixed F1-F6 across `f1sim/world.py`, `f1sim/session.py`, `f1sim/export3d.py`, `f1sim/track.py`:
+  - F1: Single shared Box2D world hosting Car 0 (`uw.car`) and Cars 1..N-1 (`car_dynamics.Car`).
+  - F2: True staggered grid positions (>3m separation) in physical environment before lights out.
+  - F3: Session terminates exactly 750 steps (15s @ 50 FPS) after the LAST classified car finishes.
+  - F5: Coordinate convention `hull.angle = heading - pi/2` matching Box2D orientation.
+  - F6: Finished/retired cars coast and decelerate under braking, never freezing at 0 m/s in place.
+- [x] Verified all 6 findings tests PASS in `tests/test_findings_f1_f6.py`.
 
-
-
+### Shared-World Engine Phase 2: Shared-World Box2D Engine (`f1sim/world.py`)
+- [x] Core Engine Architecture (`f1sim/world.py`):
+  - Single Gymnasium `CarRacing-v3` instance, single Box2D world.
+  - Car 0 is `uw.car`; Cars 1..N-1 are `car_dynamics.Car(uw.world, beta, gx, gy)`.
+  - Pre-start 2-wide staggered starting grid placement on track road.
+  - Single `world.Step(1/FPS, 6*30, 2*30)` per frame.
+  - Intercepted Box2D `contactListener.BeginContact` with dedicated `CarHullUserData` class instance to avoid Gym FrictionDetector crash.
+  - Per-car observation rendering via temporary `uw.car` viewport swap; input cropped to 84x96.
+  - Independent `WindowedProgressTracker` per car in `f1sim/track.py`.
+  - Stewards geometric collision analysis using pre-collision approach speeds: rear-ender assessed +5s penalty, otherwise racing incident.
+  - Traffic modes: `--traffic contact` (physical collisions) and `--traffic follow` (speed controller safety distance).
+- [x] Phase 2 Test Suite (`tests/test_shared_world.py`):
+  - Bit-identical observations: Solo car in `MultiCarWorld` yields 100% bit-identical observations to single-car Gym env across 200 steps.
+  - Head-on collision: Resting gap of 4.88m (~4.9m for 5.0m car length), no penetration, momentum conservation ($v \to 0$), no NaN.
+  - Rear-end collision: Geometric steward at-fault rule identifies trailing car and assesses +5s penalty.
+  - Side-swipe collision: Lateral contact resolved without tunneling ($d \ge 2.0\text{m}$) or NaN.
+  - 6-car simulation & RTF: 6-car race simulation verified running at **2.38x real-time factor**.
+- [x] Regression validation: All 50 tests (39 baseline + 6 findings + 5 shared-world) pass 100% in 105.93s.

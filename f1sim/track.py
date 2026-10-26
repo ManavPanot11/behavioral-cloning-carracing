@@ -113,9 +113,62 @@ class Track:
         # Normal vector pointing to the right of (p2 - p1)
         # Tangent: (dx, dy) -> Right Normal: (dy, -dx) / seg_len
         r_norm = np.array([seg[1], -seg[0]], dtype=np.float32) / seg_len
-
         v = np.asarray(pos, dtype=np.float32) - p1
         signed_dist = float(np.dot(v, r_norm))
         abs_dist = abs(signed_dist)
-
         return abs_dist, signed_dist
+
+
+class WindowedProgressTracker:
+    """
+    Per-car progress tracker using local-windowed waypoint search
+    to prevent teleportation artifacts or global tile-flag pollution.
+    """
+
+    def __init__(self, raw_track):
+        self.track_geom = Track(raw_track)
+        self.current_tile = 0
+        self.progress_pct = 0.0
+        self.laps_completed = 0
+        self.has_started = False
+        self._prev_tile = 0
+
+    def update(self, x, y):
+        """
+        Updates tracker with new car position (x, y).
+        Returns:
+            (best_tile_idx, norm_dist, lap_finished)
+        """
+        pos = (x, y)
+        bw = 6 if self.has_started else 25
+        fw = 20 if self.has_started else 35
+        best_tile = self.track_geom.find_nearest_tile_windowed(
+            pos, self.current_tile, backward_window=bw, forward_window=fw
+        )
+        self.progress_pct = self.track_geom.compute_continuous_progress(pos, best_tile)
+
+        lap_finished = False
+        n = self.track_geom.num_tiles
+        # Crossing start/finish line: from high tile (near end) to low tile (near 0)
+        if self.has_started and self._prev_tile > int(n * 0.70) and best_tile < int(n * 0.25):
+            lap_finished = True
+            self.laps_completed += 1
+
+        if best_tile > 5:
+            self.has_started = True
+
+        self._prev_tile = self.current_tile
+        self.current_tile = best_tile
+
+        abs_dist, _ = self.track_geom.compute_centre_line_distance(pos, best_tile)
+        return best_tile, abs_dist, lap_finished
+
+
+def extract_sectors(raw_track):
+    """Return sector boundary indices for a track."""
+    t = Track(raw_track)
+    return {
+        "s1_end": t.sector_boundaries[0],
+        "s2_end": t.sector_boundaries[1],
+        "s3_end": t.sector_boundaries[2],
+    }

@@ -168,6 +168,22 @@ class Stewards:
         st.was_offroad = is_offroad
         return new_events
 
+    def apply_penalty(self, car_id, penalty_seconds=5.0, reason="COLLISION", step=None):
+        """
+        Manually assess a time penalty to a car (e.g. from collision steward investigation).
+        """
+        if car_id in self.states:
+            st = self.states[car_id]
+            st.penalty_seconds += penalty_seconds
+            step_val = step if step is not None else 0
+            ev = RaceControlEvent(
+                step_val, step_val / self.fps, car_id, st.code, "PENALTY",
+                f"CAR {st.code} - {reason}: +{penalty_seconds:.0f}S TIME PENALTY"
+            )
+            self.event_log.append(ev)
+            return ev
+        return None
+
     def get_recent_notices(self, current_step, window_steps=200):
         """
         Return notices active within the last window_steps (for on-screen banners).

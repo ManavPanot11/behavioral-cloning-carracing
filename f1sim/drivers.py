@@ -18,8 +18,21 @@ import numpy as np
 # PyTorch / Keras backend initialization
 os.environ.setdefault("KERAS_BACKEND", "torch")
 import keras
+from expert import expert_steer, speed_controller
 
-from expert import expert_steer, speed_controller, get_car_state
+
+def get_car_state(car_or_env):
+    """Return (x, y, heading_angle, speed) for a car_dynamics.Car or Gymnasium env."""
+    if hasattr(car_or_env, "hull"):
+        hull = car_or_env.hull
+    else:
+        uw = car_or_env.unwrapped if hasattr(car_or_env, "unwrapped") else car_or_env
+        hull = uw.car.hull
+    x, y = float(hull.position[0]), float(hull.position[1])
+    heading = float(hull.angle + math.pi / 2.0)
+    vx, vy = float(hull.linearVelocity[0]), float(hull.linearVelocity[1])
+    speed = float(math.sqrt(vx**2 + vy**2))
+    return x, y, heading, speed
 
 
 # Fictional Team & Driver Registry
@@ -119,7 +132,8 @@ class ExpertDriver(Driver):
         self.target_turn = target_turn
 
     def act(self, obs, env, step=None):
-        if step is not None and step < 50:
+        env_uw = env.unwrapped if hasattr(env, "unwrapped") else env
+        if (hasattr(env_uw, "t") and env_uw.t < 1.0) or (step is not None and step < 50):
             return np.array([0.0, 0.0, 0.0], dtype=np.float32)
         steer = expert_steer(env, lookahead=self.lookahead, gain=self.gain)
         gas, brake = speed_controller(
@@ -160,7 +174,8 @@ class ModelDriver(Driver):
 
     def act(self, obs, env, step=None):
         # Initial zoom-in skip frames: car dropped from height, camera zooming in
-        if step is not None and step < 50:
+        env_uw = env.unwrapped if hasattr(env, "unwrapped") else env
+        if (hasattr(env_uw, "t") and env_uw.t < 1.0) or (step is not None and step < 50):
             return np.array([0.0, 0.0, 0.0], dtype=np.float32)
 
         crop = self.preprocess_obs(obs)
@@ -168,7 +183,7 @@ class ModelDriver(Driver):
 
         # Single forward pass without training gradients
         pred = self.model(batch, training=False)
-        pred_steer = float(pred.detach().cpu().numpy()[0, 0])
+        pred_steer = float(keras.ops.convert_to_numpy(pred)[0, 0])
         pred_steer = float(np.clip(pred_steer, -1.0, 1.0))
 
         gas, brake = speed_controller(
@@ -201,11 +216,16 @@ class BatchedModelDriver:
         for car_id, model in self.models.items():
             obs = obs_dict[car_id]
             env = env_dict[car_id]
-            crop = obs[:84, :, :].astype(np.float32) / 255.0
+            env_uw = env.unwrapped if hasattr(env, "unwrapped") else env
+            if hasattr(env_uw, "t") and env_uw.t < 1.0:
+                actions[car_id] = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+                continue
+
+            crop = obs[:84, :, :].astype(np.float32)
             batch = np.expand_dims(crop, axis=0)
 
             pred = model(batch, training=False)
-            pred_steer = float(pred.detach().cpu().numpy()[0, 0])
+            pred_steer = float(keras.ops.convert_to_numpy(pred)[0, 0])
             pred_steer = float(np.clip(pred_steer, -1.0, 1.0))
 
             gas, brake = speed_controller(
