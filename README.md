@@ -32,14 +32,17 @@ The project features a full 3D night-race WebGL replay viewer built with Three.j
   *(Note: Do not enable GitHub Pages automatically; configure it via repository settings when ready to publish.)*
 
 ### How to Export & View a Replay (3-Step Guide)
-1. **Export 3D Replay Telemetry**:
+1. **Launch Live Streaming Server (Local Interactive Stream)**:
    ```powershell
-   python -m f1sim export3d --seed 3003 --laps 2 --out docs/viewer/data/race_3003.json
+   python -m f1sim live --seed random --laps 3 --traffic contact
    ```
-2. **Launch Local HTTP Server**:
+   *Note: Live WebSocket streaming is strictly local (`ws://127.0.0.1:8765`). The hosted static deployment on Vercel serves pre-recorded replays from the catalog (`data/index.json`).*
+
+2. **Generate Multi-Replay Showcase Catalog**:
    ```powershell
-   python -m http.server 8080
+   python -m f1sim make_replays --n 8
    ```
+
 3. **Open Viewer in Browser**:
    Open [http://localhost:8080/docs/viewer/index.html](http://localhost:8080/docs/viewer/index.html) (or drag-and-drop any replay JSON directly onto the canvas).
 
@@ -50,9 +53,12 @@ The project features a full 3D night-race WebGL replay viewer built with Three.j
 | **Speed Telemetry** | **SIM TRUTH** | Real Box2D linear velocity ($\text{km/h} = 3.6 \times v$). |
 | **Inputs (Gas/Brake/Steer)** | **SIM TRUTH** | Logged action vectors executed by neural policies / expert driver. |
 | **Wheel Track Limits** | **SIM TRUTH** | Real-time contact booleans for all 4 wheels `[FL, FR, RL, RR]` via `FrictionDetector`. |
+| **Physical Collisions** | **SIM TRUTH** | Hull-hull Box2D contact solver in shared world; steward geometric penalties. |
 | **Timing & Gaps** | **SIM TRUTH** | Common-checkpoint micro-sector interval deltas from `f1sim.timing`. |
 | **Body Pitch & Roll** | *Cosmetic* | Dynamic chassis lean derived from longitudinal acceleration and lateral G ($\pm 2.5^\circ$). |
 | **Wheel Spin & Steering** | *Cosmetic* | Visual rotation proportional to speed; front wheels turn to match steer action. |
+| **Collision Sparks** | *Cosmetic* | Particle sparks emitted at contact points during physical car-to-car impacts. |
+| **Camera Shake** | *Cosmetic* | Smooth camera trauma impulse triggered during on-track contact incidents. |
 | **Night Floodlights & Sky** | *Cosmetic* | Night atmosphere with 1,800 stars, track floodlight poles, and soft car shadow maps. |
 
 ---
@@ -76,7 +82,7 @@ python -m f1sim doctor
 python -m f1sim weekend --seed 3003 --laps 2 --video videos/f1_showcase_3003.mp4 --gif videos/f1_showcase_3003.gif
 ```
 
-### Run Full Test Suite (34 automated tests across physics, rules, rendering, and cross-validation)
+### Run Full Test Suite (69 automated tests across physics, shared-world collisions, rules, race lifecycle, 3D rendering, and cross-validation)
 ```powershell
 pytest tests/ -v
 ```

@@ -72,3 +72,25 @@ graph TD
 - 1920x1080 Pygame canvas with responsive DPI scaling (720p, 1080p, 1440p).
 - Single authentic checkered start/finish line at waypoint 0.
 - Live follow-camera, minimap, driver cam inset (84x96), speedometer, steer dial, throttle/brake gauges.
+
+### `f1sim.world.MultiCarWorld` (Shared-World Physics Engine)
+- **Problem Solved**: Original simulation created one independent Box2D world per car, preventing vehicle collisions and wheel-to-wheel racing.
+- **Solution**:
+  - Unified Box2D physics world hosting 6 concurrent Car objects (Car 0 = `uw.car`, Cars 1..5 = `car_dynamics.Car(uw.world, ...)`).
+  - Hull-to-hull Box2D contact solver preventing vehicle overlap and high-speed tunneling.
+  - Per-car observation generation with zero-overhead swap-and-restore rendering for neural policies.
+  - Full Race Lifecycle state machine (`GRID` -> `LIGHTS` -> `RACING` -> `CHEQUERED` -> `FINISHING` -> `COOLDOWN` -> `RESULTS`).
+  - Session ends exactly 750 steps (15.0s @ 50 FPS) after the last classified car crosses the finish line.
+  - Geometric at-fault steward penalties (+5s assessed to trailing car during rear-end collisions).
+  - Dual traffic modes: `--traffic contact` (physical contact) and `--traffic follow` (multi-stage distance braking).
+
+### `f1sim.live` (Real-Time WebSocket Broadcaster)
+- Zero-dependency RFC 6455 pure-Python WebSocket server streaming 50 FPS telemetry packets to 3D WebGL viewer.
+- Integrated HTTP static server for local viewer hosting.
+- Replay generator (`python -m f1sim make_replays --n 8`) maintaining the web catalog `docs/viewer/data/index.json`.
+
+### `f1sim.custom_track` (Custom Track & Circuit Diagnostics)
+- `CustomTrackEnv`: Gymnasium-compatible CarRacing environment utilizing custom geometry from `track.json` or glTF polyline ("centerline"/"startline") with labelled experimental auto-extraction fallback.
+- Strictly adheres to installed Gymnasium CarRacing constants: uses `TRACK_WIDTH` (`40 / 6.0 = 6.6667m`), Box2D polygon fixtures, sensors, and road tile coloring.
+- Automatic warning if expected lap time exceeds 3 minutes (180s).
+- Comprehensive validation suite: Scripted expert lap completion (>85% track coverage, reward >900), honest model evaluation without retraining, 50-track corner radii distribution comparison, alignment check, and horizontal mirror symmetry test.

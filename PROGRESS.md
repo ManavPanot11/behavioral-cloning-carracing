@@ -271,3 +271,25 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
 - [x] Verification Suite (`tests/test_custom_models_and_track.py`):
   - 9/9 unit tests passing: GLTFLoader vendor check, car.json schemas & 5.0m×2.4m footprint, track loader, lap time warning, CustomTrackEnv fixtures, expert finish, 50-track radii, alignment check, and mirror test.
 
+### Shared-World Engine Phase 6: Viewer, Docs & Hygiene (F10)
+- [x] Repository Hygiene & Legacy Archive:
+  - Untracked `.agents/` and `scratch_*` files with `git rm --cached` (local files preserved), added to `.gitignore`.
+  - Created `legacy/` directory and safely moved `evaluate_old.py`, `diagnose_seam.py`, `race_multicar.py`, `index.html`, and `race_viewer.html` via `git mv`.
+  - Updated 2D viewer link in `docs/viewer/index.html` to `../../legacy/index.html?view=2d`.
+  - Tracked file audit (`git ls-files docs/media docs/viewer/data models`):
+    - `docs/media`: `hero.gif` (9.21 MB), `race3d.mp4` (7.37 MB), 6 camera screenshots, plus 3 multi-resolution responsive screenshots (`viewer_1920x1080.png`, `viewer_1280x720.png`, `viewer_2560x1440.png`) and `calibration_modal.png`.
+    - `docs/viewer/data`: catalog `index.json` and 8 diverse replay files (`race_3000.json` through `race_6004.json`).
+    - `models`: all 22 trained models present, each 2.86 MB (< 5 MB), committed in git.
+- [x] Documentation Updates:
+  - Updated `README.md`: test count updated to 69 automated tests; 6-car shared-world grid and 6 custom 3D models documented; local live streaming vs static replay catalog clearly explained; collision sparks and camera shake added to Truth vs. Cosmetic table.
+  - Updated `docs/architecture.md`: documented `MultiCarWorld` shared Box2D engine, lifecycle state machine, `f1sim.live` WebSocket streaming, and `CustomTrackEnv`.
+  - Updated `docs/viewer/README.md`: documented calibration mode (shortcut `C`), live mode badge, collision sparks, camera shake, and timeline contact markers.
+- [x] Multi-Resolution Visual Verification (Browser Subagent):
+  - Tested 1920x1080 (FHD): Clean layout, timing tower, telemetry HUD, 3D canvas, zero console errors.
+  - Tested 1280x720 (HD): Responsive layout adapts, no overlapping text, controls accessible.
+  - Tested 2560x1440 (QHD): High-DPI canvas crisp rendering, zero console errors.
+  - Calibration Modal: Tested interactive model selector, wireframe toggle, sliders, and clipboard copy.
+- [x] Baseline Integrity:
+  - Zero modifications to `results/`, `models/`, `evaluate.py`, `dagger.py`, `train.py`, `collect.py`, or `expert.py`'s behavior. Evaluation numbers remain unchanged.
+
+

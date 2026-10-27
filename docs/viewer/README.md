@@ -47,6 +47,7 @@ An interactive, broadcast-style 3D WebGL race visualization built using Three.js
 | **4** | Select Top-Down Orthographic Camera |
 | **5** | Select Trackside Handover Camera |
 | **6** | Select Free Orbit Camera (Click & drag to rotate, scroll to zoom) |
+| **C** | Toggle 3D Car Calibration Modal & Physics Wireframe Box |
 | **F** | Toggle Fullscreen Mode |
 | **H** | Toggle Help & Controls Overlay |
 
@@ -64,6 +65,8 @@ An interactive, broadcast-style 3D WebGL race visualization built using Three.js
 | **Wheel Track Limits** | **SIM TRUTH** | Four independent wheel contact booleans `[FL, FR, RL, RR]` from `FrictionDetector`. |
 | **Body Pitch & Roll** | *Cosmetic* | Subtle chassis tilt derived from longitudinal acceleration and lateral G ($\pm 2.5^\circ$). |
 | **Tire Spin & Steer** | *Cosmetic* | Wheels rotate based on linear speed; front wheel hubs steer based on logged steering action. |
+| **Collision Sparks** | *Cosmetic* | Particle sparks emitted at contact points during physical car-to-car impacts. |
+| **Camera Shake** | *Cosmetic* | Smooth camera trauma impulse triggered during on-track contact incidents. |
 | **Floodlights & Shadows** | *Cosmetic* | Directional night lighting and soft shadow maps for visual depth. |
 
 ---
@@ -72,6 +75,7 @@ An interactive, broadcast-style 3D WebGL race visualization built using Three.js
 
 The 3D viewer is completely self-contained with no external CDN dependencies:
 - Three.js r128 is vendored in `docs/viewer/vendor/three.min.js` (MIT License).
+- GLTFLoader r128 is vendored in `docs/viewer/vendor/GLTFLoader.js` (MIT License).
 - OFL BigShoulders font is vendored in `docs/viewer/fonts/`.
 
 To launch locally:
