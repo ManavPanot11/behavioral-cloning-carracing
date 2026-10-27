@@ -31,6 +31,7 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
 | **Phase 5** | Repository & README Update | **DONE** | Updated README with hero GIF, 3D viewer section, GitHub Pages deployment guide, vendor MIT license, docs/viewer/README.md, all 39 unit tests passing. |
 | **Deploy**  | Vercel Live Deployment (`behavioral-cloning-carracing.vercel.app`) | **LIVE & VERIFIED** | Merged `viewer-3d` to `main`, pushed to GitHub, `vercel.json` and client-side redirect route `/` to `/docs/viewer/`. Browser subagent verified 3D WebGL scene, timing tower, and manual start sequence live. |
 | **Fix/Laps**| Visible Track Mesh & 10-Lap Grand Prix Upgrade | **DONE & VERIFIED** | Fixed track asphalt normal inversion (CCW winding [0, +93.34, 0], DoubleSide, white edge boundaries); simulated & exported full 10-lap 6-car Grand Prix (12,302 steps, 246s, 7.54 MB). Verified in browser subagent. |
+| **Fix/Viewer**| WebGL Black Canvas Root Cause Fix | **DONE & VERIFIED** | Made `F1Car.update()` polymorphic in `docs/viewer/js/car_model.js` supporting both positional arguments and state object; guarded `emitSparks` against NaN positions in `scene.js`. 3D track, cars, and cameras verified live. |
 
 ---
 
