@@ -40,6 +40,7 @@ export class CameraDirector {
     // Smoothing state
     this.camPos = new THREE.Vector3(0, 5, 10);
     this.targetPos = new THREE.Vector3(0, 0, 0);
+    this.modeChanged = true;
 
     // Orbit state
     this.isDragging = false;
@@ -112,6 +113,9 @@ export class CameraDirector {
   }
 
   setMode(mode) {
+    if (this.currentMode !== mode) {
+      this.modeChanged = true;
+    }
     this.currentMode = mode;
     if (mode === 4) {
       this.activeCamera = this.orthoCam;
@@ -120,8 +124,36 @@ export class CameraDirector {
     }
   }
 
+  snapNext() {
+    this.modeChanged = true;
+  }
+
   update(focusedCar, dt = 0.02) {
     if (!focusedCar) return;
+
+    // Smart billboard badge visibility management
+    if (this.scene && this.scene.carsGroup) {
+      const activeCamPos = (this.currentMode === 4) ? this.orthoCam.position : this.camPos;
+      this.scene.carsGroup.children.forEach((carRoot) => {
+        const badge = carRoot.children.find((c) => c.isSprite);
+        if (badge) {
+          if (carRoot === focusedCar.root) {
+            // Never show badge on the car being driven / tracked in close views
+            badge.visible = (this.currentMode === 4);
+          } else if (this.currentMode === 2) {
+            // In cockpit view, hide other cars' badges within 30m so windshield stays completely clear
+            const d = carRoot.position.distanceTo(activeCamPos);
+            badge.visible = d > 30.0;
+          } else if (this.currentMode === 1) {
+            // In chase cam, hide other cars' badges within 6m to prevent blocking lens in tight racing
+            const d = carRoot.position.distanceTo(activeCamPos);
+            badge.visible = d > 6.0;
+          } else {
+            badge.visible = true;
+          }
+        }
+      });
+    }
 
     const carPos = focusedCar.root.position;
     const carHeading = focusedCar.root.rotation.y;
@@ -142,26 +174,30 @@ export class CameraDirector {
     let desiredTarget = carPos.clone().add(new THREE.Vector3(0, 0.8, 0));
 
     switch (this.currentMode) {
-      case 1: // Chase Cam (Behind and above)
+      case 1: // Chase Cam (Dynamic 3rd-person racing view)
         desiredPos = carPos.clone()
-          .sub(forward.clone().multiplyScalar(9.5))
-          .add(new THREE.Vector3(0, 3.6, 0));
-        desiredTarget = carPos.clone().add(forward.clone().multiplyScalar(4.0)).add(new THREE.Vector3(0, 1.2, 0));
+          .sub(forward.clone().multiplyScalar(6.2))
+          .add(new THREE.Vector3(0, 2.4, 0));
+        desiredTarget = carPos.clone()
+          .add(forward.clone().multiplyScalar(10.0))
+          .add(new THREE.Vector3(0, 0.8, 0));
         break;
 
-      case 2: // Onboard Cockpit / Nose Cam
+      case 2: // Onboard TV Cockpit / T-Cam (Mounted on airbox / roof looking over nose)
         desiredPos = carPos.clone()
-          .add(forward.clone().multiplyScalar(0.4))
-          .add(new THREE.Vector3(0, 0.95, 0));
-        desiredTarget = desiredPos.clone().add(forward.clone().multiplyScalar(20.0));
+          .sub(forward.clone().multiplyScalar(0.25))
+          .add(new THREE.Vector3(0, 1.25, 0));
+        desiredTarget = desiredPos.clone()
+          .add(forward.clone().multiplyScalar(30.0))
+          .add(new THREE.Vector3(0, -0.1, 0));
         break;
 
       case 3: // TV Helicopter Cam (Elevated Orbit)
         const time = Date.now() * 0.0006;
-        const heliDist = 28.0;
+        const heliDist = 24.0;
         desiredPos = carPos.clone().add(new THREE.Vector3(
           Math.sin(time) * heliDist,
-          18.0,
+          16.0,
           Math.cos(time) * heliDist
         ));
         desiredTarget = carPos.clone().add(new THREE.Vector3(0, 0.5, 0));
@@ -186,6 +222,12 @@ export class CameraDirector {
           }
           desiredPos = bestPost.position.clone();
           desiredTarget = carPos.clone().add(new THREE.Vector3(0, 0.6, 0));
+
+          // Cut instantly on post handover
+          if (this.lastTracksidePost !== bestPost) {
+            this.camPos.copy(desiredPos);
+            this.lastTracksidePost = bestPost;
+          }
         } else {
           desiredPos = carPos.clone().add(new THREE.Vector3(15, 10, 15));
         }
@@ -200,9 +242,16 @@ export class CameraDirector {
         break;
     }
 
-    // Smooth camera movement
-    const smoothFactor = (this.currentMode === 2) ? 0.35 : 0.08;
-    this.camPos.lerp(desiredPos, smoothFactor);
+    // Smooth camera movement & orientation tracking
+    if (this.modeChanged || this.camPos.distanceTo(desiredPos) > 40.0) {
+      this.camPos.copy(desiredPos);
+      this.targetPos.copy(desiredTarget);
+      this.modeChanged = false;
+    } else {
+      const smoothFactor = (this.currentMode === 2) ? 0.75 : 0.35;
+      this.camPos.lerp(desiredPos, smoothFactor);
+      this.targetPos.lerp(desiredTarget, smoothFactor);
+    }
     this.perspCam.position.copy(this.camPos);
 
     // Apply cosmetic camera shake

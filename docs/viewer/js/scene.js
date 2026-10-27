@@ -37,19 +37,23 @@ export class TrackScene {
   }
 
   setupLighting() {
-    // Ambient night moonlight - clear visibility across entire circuit
-    const ambient = new THREE.AmbientLight(0x384666, 1.25);
+    // 1. Hemisphere Light - smooth sky/ground ambient fill for rich PBR car paints
+    const hemiLight = new THREE.HemisphereLight(0xddeeff, 0x1a2233, 1.6);
+    this.scene.add(hemiLight);
+
+    // 2. Ambient Night Light
+    const ambient = new THREE.AmbientLight(0x283850, 0.8);
     this.scene.add(ambient);
 
-    // Moon / Directional Key Light
-    const moonLight = new THREE.DirectionalLight(0x94b8ff, 1.65);
+    // 3. Moon / Primary Directional Key Light
+    const moonLight = new THREE.DirectionalLight(0xbad7ff, 1.8);
     moonLight.position.set(120, 250, 150);
     moonLight.castShadow = true;
     moonLight.shadow.mapSize.width = 2048;
     moonLight.shadow.mapSize.height = 2048;
     moonLight.shadow.camera.near = 10;
     moonLight.shadow.camera.far = 600;
-    const d = 180;
+    const d = 220;
     moonLight.shadow.camera.left = -d;
     moonLight.shadow.camera.right = d;
     moonLight.shadow.camera.top = d;
@@ -57,6 +61,11 @@ export class TrackScene {
     moonLight.shadow.bias = -0.0005;
     this.scene.add(moonLight);
     this.mainLight = moonLight;
+
+    // 4. Secondary Fill Directional Light (illuminates shadow side of cars)
+    const fillLight = new THREE.DirectionalLight(0x6688aa, 0.9);
+    fillLight.position.set(-150, 180, -150);
+    this.scene.add(fillLight);
   }
 
   setupEnvironment() {
@@ -206,7 +215,7 @@ export class TrackScene {
     this.buildEdgeLines(trackData.left_edge || [], trackData.right_edge || []);
 
     // Build Single Start / Finish Checkered Line
-    this.buildStartFinishLine(trackData.start_finish);
+    this.buildStartFinishLine(trackData.left_edge, trackData.right_edge, trackData.start_finish);
 
     // Build Staggered Grid Boxes
     this.buildGridBoxes(trackData.grid_boxes || []);
@@ -218,7 +227,7 @@ export class TrackScene {
     this.buildFloodlights(trackData.centerline || []);
 
     // Build Start Gantry with 5 LED Lights
-    this.buildStartGantry(trackData.start_finish);
+    this.buildStartGantry(trackData.left_edge, trackData.right_edge, trackData.start_finish);
   }
 
   buildEdgeLines(leftEdge, rightEdge) {
@@ -241,8 +250,21 @@ export class TrackScene {
     }
   }
 
-  buildStartFinishLine(sfData) {
-    if (!sfData || !sfData.p1 || !sfData.p2) return;
+  buildStartFinishLine(leftEdge, rightEdge, sfData = null) {
+    let x1, z1, x2, z2;
+    if (leftEdge && leftEdge.length > 0 && rightEdge && rightEdge.length > 0) {
+      x1 = leftEdge[0][0];
+      z1 = -leftEdge[0][1];
+      x2 = rightEdge[0][0];
+      z2 = -rightEdge[0][1];
+    } else if (sfData && sfData.p1 && sfData.p2) {
+      x1 = sfData.p1[0];
+      z1 = -sfData.p1[1];
+      x2 = sfData.p2[0];
+      z2 = -sfData.p2[1];
+    } else {
+      return;
+    }
 
     // Checkered line canvas texture
     const checkCanvas = document.createElement('canvas');
@@ -263,11 +285,6 @@ export class TrackScene {
     }
 
     const checkTex = new THREE.CanvasTexture(checkCanvas);
-    const p1 = sfData.p1;
-    const p2 = sfData.p2;
-
-    const x1 = p1[0], z1 = -p1[1];
-    const x2 = p2[0], z2 = -p2[1];
     const midX = (x1 + x2) / 2;
     const midZ = (z1 + z2) / 2;
     const length = Math.hypot(x2 - x1, z2 - z1);
@@ -285,7 +302,7 @@ export class TrackScene {
       polygonOffsetUnits: -1,
     });
     const sfMesh = new THREE.Mesh(sfGeo, sfMat);
-    sfMesh.position.set(midX, 0.035, midZ);
+    sfMesh.position.set(midX, 0.046, midZ);
     sfMesh.receiveShadow = true;
     this.trackGroup.add(sfMesh);
   }
@@ -397,30 +414,43 @@ export class TrackScene {
     }
   }
 
-  buildStartGantry(sfData) {
-    if (!sfData || !sfData.p1 || !sfData.p2) return;
+  buildStartGantry(leftEdge, rightEdge, sfData = null) {
+    let x1, z1, x2, z2;
+    if (leftEdge && leftEdge.length > 0 && rightEdge && rightEdge.length > 0) {
+      x1 = leftEdge[0][0];
+      z1 = -leftEdge[0][1];
+      x2 = rightEdge[0][0];
+      z2 = -rightEdge[0][1];
+    } else if (sfData && sfData.p1 && sfData.p2) {
+      x1 = sfData.p1[0];
+      z1 = -sfData.p1[1];
+      x2 = sfData.p2[0];
+      z2 = -sfData.p2[1];
+    } else {
+      return;
+    }
 
-    const p1 = sfData.p1;
-    const p2 = sfData.p2;
-    const x1 = p1[0], z1 = -p1[1];
-    const x2 = p2[0], z2 = -p2[1];
+    const dx = x2 - x1;
+    const dz = z2 - z1;
+    const roadWidth = Math.hypot(dx, dz);
+    const ux = dx / roadWidth;
+    const uz = dz / roadWidth;
 
     const midX = (x1 + x2) / 2;
     const midZ = (z1 + z2) / 2;
-    const width = Math.hypot(x2 - x1, z2 - z1) + 6.0;
-    const angle = Math.atan2(z2 - z1, x2 - x1);
+    const width = roadWidth + 8.0; // Place pillars 4m outside track edges on grass
+    const angle = Math.atan2(dz, dx);
 
     // Gantry Structure (Truss bridge over track)
     const trussMat = new THREE.MeshStandardMaterial({ color: 0x1f2430, metalness: 0.85, roughness: 0.3 });
 
-    // Left & Right Pillars
+    // Left & Right Pillars (safely 4m outside on grass)
     const pillarGeo = new THREE.BoxGeometry(0.8, 11, 0.8);
     const leftPillar = new THREE.Mesh(pillarGeo, trussMat);
     const rightPillar = new THREE.Mesh(pillarGeo, trussMat);
 
-    const halfW = width / 2;
-    leftPillar.position.set(midX - Math.cos(angle) * halfW, 5.5, midZ - Math.sin(angle) * halfW);
-    rightPillar.position.set(midX + Math.cos(angle) * halfW, 5.5, midZ + Math.sin(angle) * halfW);
+    leftPillar.position.set(x1 - ux * 4.0, 5.5, z1 - uz * 4.0);
+    rightPillar.position.set(x2 + ux * 4.0, 5.5, z2 + uz * 4.0);
 
     this.gantryGroup.add(leftPillar);
     this.gantryGroup.add(rightPillar);
@@ -450,8 +480,8 @@ export class TrackScene {
       const bulb = new THREE.Mesh(bulbGeo, bulbMat);
 
       // Offset along the gantry beam
-      const bx = midX + Math.cos(angle) * off;
-      const bz = midZ + Math.sin(angle) * off;
+      const bx = midX + ux * off;
+      const bz = midZ + uz * off;
       bulb.position.set(bx, 9.2, bz);
       this.gantryGroup.add(bulb);
       this.startLights.push(bulb);

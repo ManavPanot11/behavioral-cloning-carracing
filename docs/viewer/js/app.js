@@ -2,9 +2,9 @@
  * docs/viewer/js/app.js - Main Application Orchestrator for 3D Replay Viewer & Live Stream.
  */
 
-import { TrackScene } from './scene.js';
-import { F1Car } from './car_model.js';
-import { CameraDirector } from './cameras.js';
+import { TrackScene } from './scene.js?v=5';
+import { F1Car } from './car_model.js?v=5';
+import { CameraDirector } from './cameras.js?v=5';
 
 class ReplayApp {
   constructor() {
@@ -780,6 +780,7 @@ class ReplayApp {
       row.addEventListener('click', (e) => {
         e.stopPropagation();
         this.focusedCarId = d.id;
+        if (this.cameraDirector) this.cameraDirector.snapNext();
         document.querySelectorAll('.driver-row').forEach((r) => r.classList.remove('focused'));
         row.classList.add('focused');
       });

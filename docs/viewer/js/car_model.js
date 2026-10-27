@@ -12,6 +12,15 @@
  * - Subtle cosmetic body pitch (braking/acceleration) and roll (cornering)
  */
 
+export const TEAM_MODELS = {
+  APX: 'aston_martin_f1',
+  VEL: 'ferrari_296',
+  NDX: 'porsche_992_gt3_rs',
+  ZEN: 'f1_senna_1991',
+  RDR: 'porsche_992_gt3_r_rexy',
+  ORB: 'racecar_rc09',
+};
+
 export class F1Car {
   constructor(driverMeta, initialCustomModel = null) {
     this.meta = driverMeta;
@@ -56,8 +65,9 @@ export class F1Car {
     // Wheel spin angle accumulator
     this.wheelSpinAngle = 0.0;
 
-    // Load custom model if requested or configured
-    const targetModel = initialCustomModel || driverMeta.custom_model || driverMeta.model_name;
+    // Load custom model if requested, configured, or mapped to team
+    const teamKey = (driverMeta.team || driverMeta.code || '').toUpperCase();
+    const targetModel = initialCustomModel || driverMeta.custom_model || driverMeta.model_name || TEAM_MODELS[teamKey];
     if (targetModel && targetModel !== 'procedural') {
       this.loadCustomModel(targetModel);
     }
@@ -270,10 +280,10 @@ export class F1Car {
     ctx.fillText(this.code, 64, 32);
 
     const texture = new THREE.CanvasTexture(canvas);
-    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: true });
     this.badgeSprite = new THREE.Sprite(spriteMat);
-    this.badgeSprite.scale.set(3.2, 1.6, 1.0);
-    this.badgeSprite.position.set(0, 2.7, 0);
+    this.badgeSprite.scale.set(1.2, 0.6, 1.0);
+    this.badgeSprite.position.set(0, 2.1, 0);
     this.root.add(this.badgeSprite);
   }
 
@@ -289,11 +299,20 @@ export class F1Car {
       return;
     }
 
-    const basePath = customJsonPath ? customJsonPath.substring(0, customJsonPath.lastIndexOf('/')) : `../../assets/private/cars/${carKey}`;
-    const jsonUrl = customJsonPath || `${basePath}/car.json`;
+    let basePath = customJsonPath ? customJsonPath.substring(0, customJsonPath.lastIndexOf('/')) : `../../assets/private/cars/${carKey}`;
+    let jsonUrl = customJsonPath || `${basePath}/car.json`;
 
     try {
-      const res = await fetch(jsonUrl);
+      let res = await fetch(jsonUrl);
+      if (!res.ok && !customJsonPath) {
+        const fallbackBase = `/assets/private/cars/${carKey}`;
+        const fallbackRes = await fetch(`${fallbackBase}/car.json`);
+        if (fallbackRes.ok) {
+          res = fallbackRes;
+          basePath = fallbackBase;
+          jsonUrl = `${basePath}/car.json`;
+        }
+      }
       if (!res.ok) {
         throw new Error(`HTTP ${res.status} fetching ${jsonUrl}`);
       }
@@ -420,7 +439,7 @@ export class F1Car {
       this.customModel.rotation.x = Math.PI / 2;
     }
 
-    // Forward axis correction
+    // Forward axis correction (Three.js front is along -Z)
     if (cfg.forward === '+X') {
       this.customModel.rotation.y += Math.PI / 2;
     } else if (cfg.forward === '-X') {
@@ -428,6 +447,12 @@ export class F1Car {
     } else if (cfg.forward === '+Z') {
       // In Three.js car points along -Z, so +Z forward rotates 180 deg
       this.customModel.rotation.y += Math.PI;
+    } else if (cfg.forward === '-Z') {
+      // Already aligned with Three.js -Z forward
+    } else if (cfg.forward === '+Y') {
+      this.customModel.rotation.x += Math.PI / 2;
+    } else if (cfg.forward === '-Y') {
+      this.customModel.rotation.x -= Math.PI / 2;
     }
 
     // Explicit Euler rotations if provided in calibration

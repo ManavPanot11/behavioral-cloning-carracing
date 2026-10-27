@@ -32,6 +32,7 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
 | **Deploy**  | Vercel Live Deployment (`behavioral-cloning-carracing.vercel.app`) | **LIVE & VERIFIED** | Merged `viewer-3d` to `main`, pushed to GitHub, `vercel.json` and client-side redirect route `/` to `/docs/viewer/`. Browser subagent verified 3D WebGL scene, timing tower, and manual start sequence live. |
 | **Fix/Laps**| Visible Track Mesh & 10-Lap Grand Prix Upgrade | **DONE & VERIFIED** | Fixed track asphalt normal inversion (CCW winding [0, +93.34, 0], DoubleSide, white edge boundaries); simulated & exported full 10-lap 6-car Grand Prix (12,302 steps, 246s, 7.54 MB). Verified in browser subagent. |
 | **Fix/Viewer**| WebGL Black Canvas Root Cause Fix | **DONE & VERIFIED** | Made `F1Car.update()` polymorphic in `docs/viewer/js/car_model.js` supporting both positional arguments and state object; guarded `emitSparks` against NaN positions in `scene.js`. 3D track, cars, and cameras verified live. |
+| **Fix/Cars**  | 3D Custom Car Models & Camera Views Fix | **DONE & VERIFIED** | Mapped 6 teams to 6 custom glTF car models (`ferrari_296`, `aston_martin_f1`, `f1_senna_1991`, `porsche_992_gt3_rs`, `porsche_992_gt3_r_rexy`, `racecar_rc09`). Fixed inverted car forward orientations, gantry lateral placement (pillars 4m on grass), smart badge occlusion, and camera tracking across all 6 views. All 69 unit tests pass. |
 
 ---
 
