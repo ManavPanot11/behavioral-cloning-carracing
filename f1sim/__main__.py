@@ -53,7 +53,7 @@ def main():
     parser_live.add_argument("--seed", type=str, default="random", help="Track seed (integer >= 6000 or 'random')")
     parser_live.add_argument("--laps", type=int, default=3, help="Number of laps to race")
     parser_live.add_argument("--traffic", type=str, default="contact", choices=["contact", "follow"], help="Traffic mode")
-    parser_live.add_argument("--pace-variance", type=float, default=0.03, help="Per-driver pace variance (0.03 for ±3%, 0 to disable)")
+    parser_live.add_argument("--pace-variance", type=float, default=0.03, help="Per-driver pace variance (0.03 for ±3%%, 0 to disable)")
     parser_live.add_argument("--port", type=int, default=8080, help="Local HTTP static server port")
     parser_live.add_argument("--ws-port", type=int, default=8765, help="WebSocket streaming port")
     parser_live.add_argument("--out", type=str, default=None, help="Path to save replay at conclusion")

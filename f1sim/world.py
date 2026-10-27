@@ -748,10 +748,14 @@ class MultiCarWorld:
 
         return self.build_replay_payload(rtf=rtf)
 
+    def _extract_track_geometry(self) -> Dict[str, Any]:
+        """Extract full 3D track ribbon, bounds, checkpoints and kerbs."""
+        from f1sim.export3d import extract_track_geometry
+        return extract_track_geometry(self.env)
+
     def build_replay_payload(self, rtf: float = 1.0) -> Dict[str, Any]:
         """Format the complete 3D WebGL Replay Viewer JSON payload."""
-        from f1sim.export3d import extract_track_geometry
-        track_geom = extract_track_geometry(self.env)
+        track_geom = self._extract_track_geometry()
 
         # Leaderboard serialization
         final_lb = self.timing.compute_leaderboard(current_step=self.current_step)
