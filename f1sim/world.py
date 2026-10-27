@@ -753,6 +753,10 @@ class MultiCarWorld:
         from f1sim.export3d import extract_track_geometry
         return extract_track_geometry(self.env)
 
+    def export_replay_dict(self, rtf: float = 1.0) -> Dict[str, Any]:
+        """Export replay dictionary payload."""
+        return self.build_replay_payload(rtf=rtf)
+
     def build_replay_payload(self, rtf: float = 1.0) -> Dict[str, Any]:
         """Format the complete 3D WebGL Replay Viewer JSON payload."""
         track_geom = self._extract_track_geometry()
