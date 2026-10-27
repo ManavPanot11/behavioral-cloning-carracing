@@ -13,14 +13,12 @@ Key Architecture:
 """
 
 import math
-import os
 import time
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Any
 
 import numpy as np
-import gymnasium as gym
 from gymnasium.envs.box2d import car_racing, car_dynamics
 
 from f1sim.drivers import (
@@ -30,13 +28,11 @@ from f1sim.drivers import (
     TEAMS,
     compute_staggered_grid_positions,
     get_car_state,
-    speed_controller,
 )
 from f1sim.env import make_env
-from f1sim.metrics import compute_progress_pct
 from f1sim.stewards import Stewards, RulesConfig
 from f1sim.timing import TimingSystem
-from f1sim.track import WindowedProgressTracker, extract_sectors
+from f1sim.track import WindowedProgressTracker
 
 
 FPS = 50.0

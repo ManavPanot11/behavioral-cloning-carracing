@@ -2,7 +2,7 @@
 expert.py - Scripted expert driver for CarRacing-v3
 Pure-pursuit steering from true track geometry + speed controller.
 """
-import os, math, sys
+import os, math
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 import numpy as np

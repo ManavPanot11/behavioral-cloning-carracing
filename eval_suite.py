@@ -6,14 +6,12 @@ Used for:
 - Stage 5: Speed stress test (1.0x, 1.25x, 1.50x)
 - Stage 6: Final held-out test evaluation (seeds 2000-2019)
 """
-import os, sys, math, time, csv
+import os
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ.setdefault("KERAS_BACKEND", "torch")
 
 import numpy as np
 import gymnasium as gym
-import keras
-import imageio
 
 from expert import (expert_steer, speed_controller, get_car_state,
                     wheels_on_track, LOOKAHEAD, GAIN,

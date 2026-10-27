@@ -46,6 +46,7 @@ def main():
     parser_vid.add_argument("--duration", type=float, default=35.0, help="Duration in seconds")
     parser_vid.add_argument("--start-step", type=int, default=0, help="Starting step")
     parser_vid.add_argument("--screenshots", action="store_true", help="Generate 6 showcase screenshots")
+    parser_vid.add_argument("--benchmark", action="store_true", help="Measure WebGL performance benchmark")
     parser_vid.add_argument("--port", type=int, default=8080, help="Local HTTP server port")
 
     # live command
@@ -53,7 +54,7 @@ def main():
     parser_live.add_argument("--seed", type=str, default="random", help="Track seed (integer >= 6000 or 'random')")
     parser_live.add_argument("--laps", type=int, default=3, help="Number of laps to race")
     parser_live.add_argument("--traffic", type=str, default="contact", choices=["contact", "follow"], help="Traffic mode")
-    parser_live.add_argument("--pace-variance", type=float, default=0.03, help="Per-driver pace variance (0.03 for ±3%%, 0 to disable)")
+    parser_live.add_argument("--pace-variance", type=float, default=0.03, help="Per-driver pace variance (0.03 for +/-3%%, 0 to disable)")
     parser_live.add_argument("--port", type=int, default=8080, help="Local HTTP static server port")
     parser_live.add_argument("--ws-port", type=int, default=8765, help="WebSocket streaming port")
     parser_live.add_argument("--out", type=str, default=None, help="Path to save replay at conclusion")
@@ -120,7 +121,7 @@ def main():
         run_and_export_3d(track_seed=args.seed, total_laps=args.laps, out_path=args.out, progress_callback=on_progress)
     elif args.command == "video3d":
         from f1sim.video3d import measure_performance, capture_screenshots, generate_video
-        if args.benchmark:
+        if getattr(args, "benchmark", False):
             measure_performance(replay_path=args.replay, port=args.port)
         elif args.screenshots:
             capture_screenshots(replay_path=args.replay, out_dir="docs/media", port=args.port)

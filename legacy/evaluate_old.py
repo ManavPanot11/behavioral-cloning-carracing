@@ -5,7 +5,7 @@ Evaluate a trained model (or reference driver) on unseen tracks.
   dev:  seeds 1000-1019 (used inside DAgger loop)
   test: seeds 2000-2019 (default, final numbers only)
 """
-import os, sys, math, time, csv
+import os, sys, csv
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ.setdefault("KERAS_BACKEND", "torch")
 
@@ -13,7 +13,7 @@ import numpy as np
 import gymnasium as gym
 import keras
 
-from expert import (expert_steer, speed_controller, get_car_state,
+from expert import (expert_steer, speed_controller,
                     wheels_on_track, LOOKAHEAD, GAIN,
                     TARGET_SPEED_STRAIGHT, TARGET_SPEED_TURN, MIN_TARGET_SPEED)
 

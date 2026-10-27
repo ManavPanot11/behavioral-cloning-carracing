@@ -33,6 +33,7 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
 | **Fix/Laps**| Visible Track Mesh & 10-Lap Grand Prix Upgrade | **DONE & VERIFIED** | Fixed track asphalt normal inversion (CCW winding [0, +93.34, 0], DoubleSide, white edge boundaries); simulated & exported full 10-lap 6-car Grand Prix (12,302 steps, 246s, 7.54 MB). Verified in browser subagent. |
 | **Fix/Viewer**| WebGL Black Canvas Root Cause Fix | **DONE & VERIFIED** | Made `F1Car.update()` polymorphic in `docs/viewer/js/car_model.js` supporting both positional arguments and state object; guarded `emitSparks` against NaN positions in `scene.js`. 3D track, cars, and cameras verified live. |
 | **Fix/Cars**  | 3D Custom Car Models & Camera Views Fix | **DONE & VERIFIED** | Mapped 6 teams to 6 custom glTF car models (`ferrari_296`, `aston_martin_f1`, `f1_senna_1991`, `porsche_992_gt3_rs`, `porsche_992_gt3_r_rexy`, `racecar_rc09`). Fixed inverted car forward orientations, gantry lateral placement (pillars 4m on grass), smart badge occlusion, and camera tracking across all 6 views. All 69 unit tests pass. |
+| **Hygiene/Bugs**| Bug Fixes, Dead Code Removal & Root Localhost | **DONE & VERIFIED** | Fixed video3d --benchmark CLI, root index.html routing, legacy 2D viewer relative paths, Python 3.13 raw strings, cleaned unused imports & dead functions across project, all tests passing. |
 
 ---
 
@@ -293,5 +294,20 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
   - Calibration Modal: Tested interactive model selector, wireframe toggle, sliders, and clipboard copy.
 - [x] Baseline Integrity:
   - Zero modifications to `results/`, `models/`, `evaluate.py`, `dagger.py`, `train.py`, `collect.py`, or `expert.py`'s behavior. Evaluation numbers remain unchanged.
+
+### Codebase Maintenance: Bug Fixes, Dead Code Removal & Localhost Setup
+- [x] **Bug Fixes**:
+  - `f1sim/__main__.py`: Added `--benchmark` flag to `parser_vid` and safely checked `getattr(args, "benchmark", False)` in command dispatcher to resolve unhandled `AttributeError`. Replaced non-ASCII `±` character in `--pace-variance` help string to avoid Windows cp1252 encoding artifacts.
+  - `legacy/index.html` & `legacy/race_viewer.html`: Fixed relative paths for automatic 3D viewer redirect (`../docs/viewer/`) and telemetry json fetch (`../data/race_telemetry.json`), resolving HTTP 404 errors when viewing legacy archives.
+  - `generate_final_deliverables.py` & `legacy/diagnose_seam.py`: Converted LaTeX strings containing `\pm`, `\le`, `\ge`, and `\pmod` to raw strings (`r"..."`) eliminating Python 3.12+ invalid escape sequence SyntaxWarnings.
+  - `index.html`: Created root entry point that immediately routes localhost root (`/`) to `/docs/viewer/` so launching a local static server immediately renders the 3D replay viewer.
+- [x] **Dead & Unused Code Removal**:
+  - `generate_final_deliverables.py`: Removed unused `parse_int` function.
+  - Cleaned unused imports across 20+ modules (`f1sim/world.py`, `f1sim/export3d.py`, `f1sim/live.py`, `f1sim/renderer.py`, `f1sim/replay.py`, `f1sim/session.py`, `f1sim/stewards.py`, `f1sim/timing.py`, `f1sim/track.py`, `f1sim/env.py`, `f1sim/custom_track.py`, `f1sim/video3d.py`, `check_env.py`, `collect.py`, `dagger.py`, `diagnose.py`, `eval_suite.py`, `evaluate.py`, `expert.py`, `merge_stage6_results.py`, `run_stage3_dev.py`, `run_stage4_disturbance.py`, `run_stage5_speed.py`, `legacy/diagnose_seam.py`, `legacy/evaluate_old.py`).
+  - `.gitignore`: Added `docs/viewer/data/race_live_*.json` to ignore temporary live-session recording files.
+- [x] **Localhost & Test Verification**:
+  - Verified `f1sim doctor` passes completely.
+  - Verified test suite passes without regressions.
+
 
 

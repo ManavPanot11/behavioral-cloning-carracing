@@ -8,19 +8,16 @@ Provides:
 """
 
 import os
-import sys
 import time
 import imageio
 import numpy as np
 import pygame
 
-from f1sim.env import make_env
-from f1sim.drivers import ExpertDriver, ModelDriver, TEAMS, compute_staggered_grid_positions
 from f1sim.timing import TimingSystem
-from f1sim.stewards import Stewards, RulesConfig
+from f1sim.stewards import Stewards
 from f1sim.renderer import DashboardRenderer
 from f1sim.replay import TelemetryRecorder
-from expert import wheels_on_track, get_car_state
+from expert import get_car_state
 
 
 # Default 4-Car Showcase Grid:
@@ -63,7 +60,7 @@ DEFAULT_CAR_SPECS = [
 ]
 
 
-from f1sim.world import MultiCarWorld, validate_seed, CarHullUserData, SIX_CAR_SPECS
+from f1sim.world import MultiCarWorld, validate_seed
 
 
 class CarEnvWrapper:

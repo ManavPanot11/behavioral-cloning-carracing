@@ -4,7 +4,7 @@ DAgger (Dataset Aggregation) loop:
   Round 0: start from the aug model
   Rounds 1-6: collect more data with learner/expert mixing, retrain
 """
-import os, sys, json, time
+import os, sys
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ.setdefault("KERAS_BACKEND", "torch")
 
@@ -15,9 +15,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from expert import (expert_steer, speed_controller, get_car_state,
-                    wheels_on_track)
-from train import train, set_seeds, load_data, SteeringDataset, VAL_SEEDS
+from expert import expert_steer, speed_controller, wheels_on_track
+from train import set_seeds, SteeringDataset, VAL_SEEDS
 from model import build_model
 from evaluate import evaluate
 

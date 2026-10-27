@@ -5,7 +5,7 @@ Evaluates expert, zero, plain_s0, aug_s0, dagger_s0 on DEV TRACKS (seeds 1000-10
 Evaluates both at max_steps=1000 and max_steps=1500.
 Computes track progress (% of tiles visited), ending type, speed, steering jitter, etc.
 """
-import os, sys, math, time
+import os, time
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["KERAS_BACKEND"] = "torch"
 

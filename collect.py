@@ -2,7 +2,7 @@
 collect.py - Data collection for behavioral cloning
 Collects clean and noisy (with recovery perturbations) datasets.
 """
-import os, sys, time, math
+import os, time
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ.setdefault("KERAS_BACKEND", "torch")
 
@@ -12,7 +12,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from expert import expert_steer, speed_controller, wheels_on_track
+from expert import expert_steer, speed_controller
 
 # ── Configuration ────────────────────────────────────────────────────
 TRAIN_SEEDS = list(range(0, 40))

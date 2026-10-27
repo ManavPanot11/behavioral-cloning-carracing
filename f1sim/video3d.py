@@ -6,11 +6,9 @@ and encodes broadcast-quality MP4 videos, lightweight hero GIFs, and high-res sc
 """
 
 import os
-import sys
 import time
 import io
 import json
-import argparse
 import http.server
 import threading
 from PIL import Image

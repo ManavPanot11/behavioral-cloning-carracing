@@ -10,22 +10,13 @@ format matching docs/viewer/COORDS.md:
 """
 
 import os
-import sys
 import json
 import math
 import argparse
 import numpy as np
-import gymnasium as gym
 
-from gymnasium.envs.box2d.car_racing import TRACK_WIDTH, SCALE, PLAYFIELD, FPS
-from gymnasium.envs.box2d.car_dynamics import SIZE, WHEELPOS, WHEEL_R, WHEEL_W
-
-from f1sim.drivers import (
-    TEAMS, ExpertDriver, ModelDriver,
-    compute_staggered_grid_positions
-)
-from f1sim.timing import TimingSystem
-from f1sim.stewards import Stewards, RulesConfig
+from gymnasium.envs.box2d.car_racing import TRACK_WIDTH, FPS
+from f1sim.drivers import compute_staggered_grid_positions
 
 
 # Default 6-Car Grid Specification

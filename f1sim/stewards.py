@@ -8,9 +8,6 @@ Implements:
 - Race control broadcast notification stream.
 """
 
-from collections import defaultdict
-
-
 class RulesConfig:
     """
     Stewarding regulatory constants.

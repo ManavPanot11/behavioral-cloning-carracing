@@ -13,7 +13,7 @@ Evaluated on DEV tracks 1000-1019 for:
 (Expert is run FIRST at each factor to verify feasibility.)
 Saves results/dev_speed_stress.csv.
 """
-import os, sys, time, csv
+import os, time, csv
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["KERAS_BACKEND"] = "torch"
 

@@ -15,10 +15,8 @@ Features:
 import math
 import numpy as np
 import pygame
-from pygame import gfxdraw
 
 from f1sim.drivers import TEAMS
-from f1sim.timing import COLOR_PURPLE, COLOR_GREEN, COLOR_YELLOW, COLOR_WHITE, COLOR_GREY
 
 
 class DashboardRenderer:

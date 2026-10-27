@@ -8,7 +8,7 @@ Generates:
    - results/disturbance_recovery_trajectory.png
    - results/training_loss_curves.png
 """
-import os, sys
+import os
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["KERAS_BACKEND"] = "torch"
 
@@ -28,12 +28,6 @@ def load_csv(path):
 def parse_float(val, default=0.0):
     try:
         return float(val)
-    except:
-        return default
-
-def parse_int(val, default=0):
-    try:
-        return int(val)
     except:
         return default
 
@@ -431,9 +425,9 @@ def main():
     doc.append("### (ii) Does recovery data (aug) help?\n")
     doc.append("**Yes, recovery data significantly increases robustness under physical disturbances.**\n")
     doc.append("- Under clean driving, `aug` is identical to `plain` (both achieve 100% completion with 0 off-road events).\n")
-    doc.append("- However, under the pre-registered **Disturbance Test** ($\pm 0.6$ steering offset for 20 frames):\n")
+    doc.append(r"- However, under the pre-registered **Disturbance Test** ($\pm 0.6$ steering offset for 20 frames):" + "\n")
     doc.append("  - `plain` dropped laps and suffered off-road excursions: `plain_s1` completed 16/20 laps (max deviation 45.60 units) and `plain_s2` completed 19/20 laps (max deviation 55.77 units).\n")
-    doc.append("  - In contrast, **every seed of `aug` completed 20/20 laps (100%)** ($20/20, 20/20, 20/20$) with **0 off-road events** and max deviations remaining tightly bounded ($\le 8.15$ units).\n")
+    doc.append(r"  - In contrast, **every seed of `aug` completed 20/20 laps (100%)** ($20/20, 20/20, 20/20$) with **0 off-road events** and max deviations remaining tightly bounded ($\le 8.15$ units)." + "\n")
     doc.append("- Under the pre-registered decision rule, the disturbance test demonstrates an empirical benefit for recovery data over plain cloning.\n\n")
 
     # (iii) Does DAgger help beyond aug?
@@ -441,7 +435,7 @@ def main():
     doc.append("**No clear difference.**\n")
     doc.append("- Under clean driving: `aug` achieved 20.0/20 laps; `dagger` achieved 20.0/20 laps.\n")
     doc.append("- Under disturbance: `aug` achieved 20.0/20 laps (mean center distance 2.09); `dagger` achieved 20.0/20 laps (mean center distance 2.10).\n")
-    doc.append("- In fact, because `aug` with perturbation noise already provided dense recovery trajectories across the state space, all three DAgger seeds reached $\ge 19/20$ laps immediately in Round 0 and Round 1, satisfying early stopping by Round 2. DAgger did not find unique unvisited failure states that offline augmentation had missed.\n\n")
+    doc.append(r"- In fact, because `aug` with perturbation noise already provided dense recovery trajectories across the state space, all three DAgger seeds reached $\ge 19/20$ laps immediately in Round 0 and Round 1, satisfying early stopping by Round 2. DAgger did not find unique unvisited failure states that offline augmentation had missed." + "\n\n")
 
     # (iv) Ordering under disturbance or higher speed
     doc.append("### (iv) Under disturbance or higher speed, does any ordering appear?\n")

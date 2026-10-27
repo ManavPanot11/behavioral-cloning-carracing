@@ -8,7 +8,6 @@ Provides:
 - F1-style Sector 1, 2, 3 boundary definitions.
 """
 
-import math
 import numpy as np
 
 

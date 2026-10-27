@@ -8,7 +8,7 @@ Pre-registered protocol:
 - Metrics: recovered_each_disturbance, offroad_events, lap_completed, max_centre_distance, etc.
 - Saves results/dev_disturbed.csv
 """
-import os, sys, time, csv
+import os, time, csv
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["KERAS_BACKEND"] = "torch"
 

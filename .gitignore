@@ -26,8 +26,9 @@ videos/race_quad.mp4
 logs/
 *.log
 
-# Scratch files
+# Scratch files & temporary live race captures
 scratch_*
+docs/viewer/data/race_live_*.json
 
 # Customizations & skills (local only)
 .agents/

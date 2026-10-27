@@ -10,10 +10,8 @@ Provides:
 """
 
 import os
-import sys
 import time
 import json
-import math
 import base64
 import struct
 import socket
@@ -24,7 +22,7 @@ import threading
 import http.server
 from typing import Optional, Dict, Any, List
 
-from f1sim.world import MultiCarWorld, SIX_CAR_SPECS, TEAMS, TRACK_WIDTH, validate_seed
+from f1sim.world import MultiCarWorld, TEAMS, validate_seed
 
 
 class SimpleWebSocketServer:

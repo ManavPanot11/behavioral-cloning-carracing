@@ -10,7 +10,6 @@ Key guarantees:
 """
 
 import os
-import math
 import numpy as np
 import gymnasium as gym
 from gymnasium.envs.box2d import car_racing

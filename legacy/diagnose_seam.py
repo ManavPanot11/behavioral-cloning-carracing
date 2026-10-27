@@ -13,10 +13,9 @@ Investigates:
 import os
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 import math
-import numpy as np
 import gymnasium as gym
 from gymnasium.envs.box2d import car_racing
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 import pygame
 
 os.makedirs("docs/seam_diagnosis", exist_ok=True)
@@ -118,7 +117,7 @@ for seed in test_seeds:
 
 # Also inspect what happened in previous code (e.g. race_multicar.py) that produced "two checkered patches"
 report_lines.append("## Root Cause Analysis: The 'Two Checkered Patches' Bug\n")
-report_lines.append("""
+report_lines.append(r"""
 1. **Gymnasium's Native Geometry**:
    - In native Gymnasium `CarRacing-v3`, there is **NO checkered finish line**. The road is simply drawn from `self.road_poly`.
    - Each tile $i$ connects `track[i-1]` to `track[i]`.

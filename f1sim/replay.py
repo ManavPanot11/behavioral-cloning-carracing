@@ -8,7 +8,6 @@ Provides:
 
 import gzip
 import json
-import numpy as np
 
 
 class TelemetryRecorder:

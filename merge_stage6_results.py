@@ -9,7 +9,7 @@ into:
   results/test_episodes.csv
   results/test_results.csv
 """
-import os, sys, csv
+import os, csv
 import numpy as np
 
 CONDITIONS = ["clean", "disturbed", "speed_1.25", "speed_1.50"]

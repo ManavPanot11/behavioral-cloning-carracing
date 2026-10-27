@@ -3,7 +3,7 @@ Stage 0B - check_env.py
 Verify the CarRacing-v3 environment: observation shape, action space,
 track structure, wheel tile detection, zoom-in intro, and status bar.
 """
-import os, sys
+import os
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 import gymnasium as gym

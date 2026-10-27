@@ -8,7 +8,7 @@
   <!-- Auto-redirect to 3D WebGL Viewer unless ?view=2d is explicitly set -->
   <script>
     if (!window.location.search.includes('view=2d')) {
-      window.location.replace('docs/viewer/');
+      window.location.replace('../docs/viewer/');
     }
   </script>
 
@@ -1023,7 +1023,7 @@
     }
 
     // Load Telemetry Data
-    fetch('data/race_telemetry.json')
+    fetch('../data/race_telemetry.json')
       .then(res => res.json())
       .then(data => {
         telemetryData = data;

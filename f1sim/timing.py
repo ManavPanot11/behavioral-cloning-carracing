@@ -11,10 +11,6 @@ Implements:
 - Live session telemetry timing tower data structures.
 """
 
-import math
-from collections import defaultdict
-
-
 # F1 Timing Colors (RGB tuples & Hex strings)
 COLOR_PURPLE = (176, 38, 255)    # Fastest sector in session (#B026FF)
 COLOR_GREEN  = (0, 230, 118)     # Personal best sector (#00E676)

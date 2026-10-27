@@ -18,20 +18,14 @@ os.environ.setdefault("KERAS_BACKEND", "torch")
 import math
 import json
 import logging
-import warnings
 from typing import List, Tuple, Dict, Any, Optional, Union
 
 import numpy as np
 import gymnasium as gym
-from gymnasium.envs.box2d import car_racing
 from gymnasium.envs.box2d.car_racing import (
     TRACK_WIDTH,
-    TRACK_RAD,
-    TRACK_DETAIL_STEP,
     TRACK_TURN_RATE,
-    BORDER_MIN_COUNT,
     BORDER,
-    SCALE
 )
 
 from expert import expert_steer, speed_controller, get_car_state

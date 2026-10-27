@@ -3,7 +3,7 @@ run_stage3_dev.py - Stage 3 Dev Comparison under Unified Protocol
 Evaluates expert, zero, plain_s0-2, aug_s0-2, dagger_s0-2 on DEV tracks 1000-1019.
 Saves results/dev_final.csv and records 1 video clip per mode into videos/dev/<mode>/.
 """
-import os, sys, time, csv
+import os, time, csv
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["KERAS_BACKEND"] = "torch"
 
