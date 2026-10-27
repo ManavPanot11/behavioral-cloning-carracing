@@ -17,7 +17,7 @@ def main():
     # race command
     parser_race = subparsers.add_parser("race", help="Launch live F1 dashboard race")
     parser_race.add_argument("--seed", type=int, default=3003, help="Showcase track seed (3000-3019)")
-    parser_race.add_argument("--laps", type=int, default=3, help="Number of laps to race")
+    parser_race.add_argument("--laps", type=int, default=10, help="Number of laps to race")
     parser_race.add_argument("--video", type=str, default="videos/f1_race_3003.mp4", help="Path to save hero MP4")
     parser_race.add_argument("--gif", type=str, default="videos/f1_race_3003.gif", help="Path to save showcase GIF")
     parser_race.add_argument("--telemetry", type=str, default="data/telemetry_latest.json.gz", help="Path to save replay telemetry")
@@ -25,7 +25,7 @@ def main():
     # weekend command
     parser_wk = subparsers.add_parser("weekend", help="Run full Grand Prix race weekend")
     parser_wk.add_argument("--seed", type=int, default=3003, help="Showcase track seed (3000-3019)")
-    parser_wk.add_argument("--laps", type=int, default=3, help="Number of laps to race")
+    parser_wk.add_argument("--laps", type=int, default=10, help="Number of laps to race")
     parser_wk.add_argument("--video", type=str, default="videos/f1_weekend_3003.mp4", help="Path to save hero MP4")
     parser_wk.add_argument("--gif", type=str, default="videos/f1_weekend_3003.gif", help="Path to save showcase GIF")
     parser_wk.add_argument("--telemetry", type=str, default="data/telemetry_latest.json.gz", help="Path to save replay telemetry")
@@ -52,7 +52,7 @@ def main():
     # live command
     parser_live = subparsers.add_parser("live", help="Launch live interactive race streaming to 3D viewer")
     parser_live.add_argument("--seed", type=str, default="random", help="Track seed (integer >= 6000 or 'random')")
-    parser_live.add_argument("--laps", type=int, default=3, help="Number of laps to race")
+    parser_live.add_argument("--laps", type=int, default=10, help="Number of laps to race")
     parser_live.add_argument("--traffic", type=str, default="contact", choices=["contact", "follow"], help="Traffic mode")
     parser_live.add_argument("--pace-variance", type=float, default=0.03, help="Per-driver pace variance (0.03 for +/-3%%, 0 to disable)")
     parser_live.add_argument("--port", type=int, default=8080, help="Local HTTP static server port")
@@ -63,7 +63,7 @@ def main():
     # make_replays command
     parser_mr = subparsers.add_parser("make_replays", help="Generate N diverse replays and index.json catalog")
     parser_mr.add_argument("--n", type=int, default=8, help="Number of replays to generate (default: 8)")
-    parser_mr.add_argument("--laps", type=int, default=3, help="Number of laps per replay")
+    parser_mr.add_argument("--laps", type=int, default=10, help="Number of laps per replay")
     parser_mr.add_argument("--out-dir", type=str, default="docs/viewer/data", help="Output directory for replays")
 
     args = parser.parse_args()

@@ -34,6 +34,7 @@ Running log tracking all phases of the project upgrade (done / verified / blocke
 | **Fix/Viewer**| WebGL Black Canvas Root Cause Fix | **DONE & VERIFIED** | Made `F1Car.update()` polymorphic in `docs/viewer/js/car_model.js` supporting both positional arguments and state object; guarded `emitSparks` against NaN positions in `scene.js`. 3D track, cars, and cameras verified live. |
 | **Fix/Cars**  | 3D Custom Car Models & Camera Views Fix | **DONE & VERIFIED** | Mapped 6 teams to 6 custom glTF car models (`ferrari_296`, `aston_martin_f1`, `f1_senna_1991`, `porsche_992_gt3_rs`, `porsche_992_gt3_r_rexy`, `racecar_rc09`). Fixed inverted car forward orientations, gantry lateral placement (pillars 4m on grass), smart badge occlusion, and camera tracking across all 6 views. All 69 unit tests pass. |
 | **Hygiene/Bugs**| Bug Fixes, Dead Code Removal & Root Localhost | **DONE & VERIFIED** | Fixed video3d --benchmark CLI, root index.html routing, legacy 2D viewer relative paths, Python 3.13 raw strings, cleaned unused imports & dead functions across project, all tests passing. |
+| **Fix/10-Laps & Physics**| Physics Deadlock Fix, State Isolation & 10-Lap Grand Prix | **DONE & VERIFIED** | Isolated per-car env state via `CarEnvWrapper`, prevented follow-mode permanent brake lock, eliminated finished-car obstruction, and defaulted 3D viewer & simulation CLIs to 10-lap Grand Prix (`race_3003.json`). All tests pass. |
 
 ---
 

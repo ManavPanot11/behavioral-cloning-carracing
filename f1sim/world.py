@@ -64,6 +64,46 @@ class CarHullUserData:
         self.is_car_hull = True
 
 
+class CarEnvWrapper:
+    """
+    Wrapper around the shared MultiCarWorld environment presenting standard Gym env
+    semantics for a specific car (e.g. for inspection, drivers, and speed controller).
+    """
+
+    def __init__(self, mcw, car_id: str):
+        self.mcw = mcw
+        self.car_id = car_id
+        self.car = mcw.cars[car_id]
+        self._env = mcw.env
+
+    @property
+    def unwrapped(self):
+        class UnwrappedProxy:
+            def __init__(proxy_self, uw, car, mcw):
+                proxy_self._uw = uw
+                proxy_self.car = car
+                proxy_self.world = mcw.world
+                proxy_self.track = mcw.track
+                proxy_self.t = uw.t
+
+            def __getattr__(proxy_self, item):
+                return getattr(proxy_self._uw, item)
+
+        return UnwrappedProxy(self._env.unwrapped, self.car, self.mcw)
+
+    def reset(self, seed=None):
+        return self.mcw._get_car_observation(self.car), {}
+
+    def step(self, action):
+        return None, 0.0, False, False, {}
+
+    def close(self):
+        pass
+
+    def __getattr__(self, item):
+        return getattr(self._env, item)
+
+
 @dataclass
 class ContactRecord:
     step: int
@@ -316,6 +356,9 @@ class MultiCarWorld:
             }
             self._prev_heading[cid] = g_heading
 
+        # Create isolated per-car environment wrappers for driver inference & speed control
+        self.car_envs = {cid: CarEnvWrapper(self, cid) for cid in self.cars}
+
         # 5. Intercept Box2D ContactListener for car-car collisions
         self._setup_collision_listener()
 
@@ -410,20 +453,34 @@ class MultiCarWorld:
                 actions[cid] = np.array([0.0, 0.0, 1.0], dtype=np.float32)
             elif has_finished or is_dnf:
                 # Post-race cool down: smooth deceleration, never freeze in place
-                # Follow gentle track curve with engine braking to come to a stop
                 steer = 0.0
-                gas = 0.0
-                brake = float(min(0.4, max(0.1, speed * 0.04)))
+                others_racing = any(c not in self.finished_cars and not self.stewards.states[c].is_dnf for c in self.cars)
+                if others_racing:
+                    # Others still racing: keep rolling gently out of the way
+                    if speed < 14.0:
+                        gas = 0.25
+                        brake = 0.0
+                    elif speed > 24.0:
+                        gas = 0.0
+                        brake = 0.3
+                    else:
+                        gas = 0.1
+                        brake = 0.0
+                else:
+                    # All classified cars completed race: come to a stop
+                    gas = 0.0
+                    brake = float(min(0.4, max(0.1, speed * 0.04)))
                 actions[cid] = np.array([steer, gas, brake], dtype=np.float32)
             else:
-                # Active racing driver
+                # Active racing driver: pass car's dedicated env wrapper so speed controller reads THIS car
                 driver = self.drivers[cid]
+                car_env = self.car_envs.get(cid, self.env)
                 if isinstance(driver, ModelDriver):
                     obs = self._get_car_observation(car)
-                    act = driver.act(obs, self.env, step=step)
+                    act = driver.act(obs, car_env, step=step)
                 else:
                     # Expert Driver
-                    act = driver.act(None, self.env, step=step)
+                    act = driver.act(None, car_env, step=step)
 
                 # Traffic follow mode: avoid ramming car directly ahead
                 if self.traffic_mode == "follow":
@@ -628,7 +685,7 @@ class MultiCarWorld:
         return True
 
     def _apply_follow_logic(self, my_cid: str, my_car: car_dynamics.Car, act: np.ndarray) -> np.ndarray:
-        """Modulate speed in 'follow' traffic mode to prevent rear-ending."""
+        """Modulate speed in 'follow' traffic mode to prevent rear-ending without deadlocking."""
         my_x, my_y, my_heading, my_speed = get_car_state(my_car)
         fwd = np.array([math.cos(my_heading), math.sin(my_heading)])
         right = np.array([math.sin(my_heading), -math.cos(my_heading)])
@@ -638,21 +695,43 @@ class MultiCarWorld:
         for other_cid, other_car in self.cars.items():
             if other_cid == my_cid:
                 continue
+            other_is_finished = other_cid in self.finished_cars or self.stewards.states[other_cid].is_dnf
+
             ox, oy, ohead, ospeed = get_car_state(other_car)
             rel = np.array([ox - my_x, oy - my_y])
             d_fwd = float(np.dot(rel, fwd))
             d_lat = float(np.dot(rel, right))
 
             # Car ahead within forward cone
-            if 0.5 < d_fwd < 20.0 and abs(d_lat) < 3.2:
-                if d_fwd < 7.5:
+            if 0.5 < d_fwd < 22.0 and abs(d_lat) < 3.2:
+                if other_is_finished:
+                    # Steer gently away to overtake finished/parked car without stopping
+                    nudge = -0.35 if d_lat >= 0 else 0.35
+                    steer = float(np.clip(steer + nudge, -1.0, 1.0))
+                    continue
+
+                if d_fwd < 5.0 and my_speed > ospeed:
+                    # Closing fast: brake firmly to match speed
                     gas = 0.0
-                    brake = 0.85
-                elif d_fwd < 13.0 and my_speed > ospeed:
-                    gas = 0.0
-                    brake = float(min(0.6, 0.2 + (13.0 - d_fwd) * 0.08))
-                elif d_fwd < 20.0 and my_speed > ospeed:
-                    gas *= 0.35
+                    brake = min(0.85, 0.4 + (my_speed - ospeed) * 0.05)
+                elif d_fwd < 8.0:
+                    if my_speed > ospeed:
+                        gas = 0.0
+                        brake = float(min(0.6, 0.15 + (my_speed - ospeed) * 0.04))
+                    else:
+                        # Speed matched: maintain gap without freezing
+                        gas = min(0.4, gas)
+                        brake = 0.0
+                    # Add lateral evasion nudge to encourage passing
+                    nudge = -0.2 if d_lat >= 0 else 0.2
+                    steer = float(np.clip(steer + nudge, -1.0, 1.0))
+                elif d_fwd < 18.0 and my_speed > ospeed:
+                    gas *= 0.65
+
+        # Anti-stall guard: if car is almost stopped and trying to race, do not allow hard brake
+        if my_speed < 5.0 and my_cid not in self.finished_cars:
+            brake = min(brake, 0.1)
+            gas = max(gas, 0.4)
 
         return np.array([steer, gas, brake], dtype=np.float32)
 

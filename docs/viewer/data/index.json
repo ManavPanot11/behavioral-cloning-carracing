@@ -1,9 +1,21 @@
 {
   "replays": [
     {
+      "id": "race_3003",
+      "file": "data/race_3003.json",
+      "name": "Showcase Grand Prix — Seed 3003 (10 Laps)",
+      "seed": 3003,
+      "laps": 10,
+      "winner": "Alex Vance",
+      "winner_team": "APX",
+      "fastest_lap": "21.960",
+      "contacts": 0,
+      "duration_s": 246.04
+    },
+    {
       "id": "race_3000",
       "file": "data/race_3000.json",
-      "name": "Grand Prix \u2014 Seed 3000 (1 Laps)",
+      "name": "Grand Prix — Seed 3000 (1 Lap)",
       "seed": 3000,
       "laps": 1,
       "winner": "---",
@@ -15,7 +27,7 @@
     {
       "id": "race_3001",
       "file": "data/race_3001.json",
-      "name": "Grand Prix \u2014 Seed 3001 (1 Laps)",
+      "name": "Grand Prix — Seed 3001 (1 Lap)",
       "seed": 3001,
       "laps": 1,
       "winner": "---",
@@ -27,7 +39,7 @@
     {
       "id": "race_3002",
       "file": "data/race_3002.json",
-      "name": "Grand Prix \u2014 Seed 3002 (1 Laps)",
+      "name": "Grand Prix — Seed 3002 (1 Lap)",
       "seed": 3002,
       "laps": 1,
       "winner": "---",
@@ -37,21 +49,9 @@
       "duration_s": 80.02
     },
     {
-      "id": "race_3003",
-      "file": "data/race_3003.json",
-      "name": "Grand Prix \u2014 Seed 3003 (1 Laps)",
-      "seed": 3003,
-      "laps": 1,
-      "winner": "Alex Vance",
-      "winner_team": "APX",
-      "fastest_lap": "21.960",
-      "contacts": 0,
-      "duration_s": 246.04
-    },
-    {
       "id": "race_6001",
       "file": "data/race_6001.json",
-      "name": "Grand Prix \u2014 Seed 6001 (1 Laps)",
+      "name": "Grand Prix — Seed 6001 (1 Lap)",
       "seed": 6001,
       "laps": 1,
       "winner": "---",
@@ -63,7 +63,7 @@
     {
       "id": "race_6002",
       "file": "data/race_6002.json",
-      "name": "Grand Prix \u2014 Seed 6002 (1 Laps)",
+      "name": "Grand Prix — Seed 6002 (1 Lap)",
       "seed": 6002,
       "laps": 1,
       "winner": "---",
@@ -75,7 +75,7 @@
     {
       "id": "race_6003",
       "file": "data/race_6003.json",
-      "name": "Grand Prix \u2014 Seed 6003 (1 Laps)",
+      "name": "Grand Prix — Seed 6003 (1 Lap)",
       "seed": 6003,
       "laps": 1,
       "winner": "---",
@@ -87,7 +87,7 @@
     {
       "id": "race_6004",
       "file": "data/race_6004.json",
-      "name": "Grand Prix \u2014 Seed 6004 (1 Laps)",
+      "name": "Grand Prix — Seed 6004 (1 Lap)",
       "seed": 6004,
       "laps": 1,
       "winner": "---",

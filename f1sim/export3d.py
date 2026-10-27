@@ -179,7 +179,7 @@ def extract_track_geometry(ref_env):
 
 def run_and_export_3d(
     track_seed=3003,
-    total_laps=2,
+    total_laps=10,
     car_specs=None,
     out_path="docs/viewer/data/race_3003.json",
     progress_callback=None,
@@ -218,7 +218,7 @@ def run_and_export_3d(
 def main():
     parser = argparse.ArgumentParser(description="Export race simulation to 3D replay JSON")
     parser.add_argument("--seed", type=int, default=3003, help="Showcase track seed (3000-3019 or >=6000)")
-    parser.add_argument("--laps", type=int, default=2, help="Number of laps to simulate")
+    parser.add_argument("--laps", type=int, default=10, help="Number of laps to simulate")
     parser.add_argument("--traffic", type=str, default="contact", choices=["contact", "follow"], help="Traffic mode")
     parser.add_argument("--out", type=str, default="docs/viewer/data/race_3003.json", help="Output path for 3D JSON")
     args = parser.parse_args()

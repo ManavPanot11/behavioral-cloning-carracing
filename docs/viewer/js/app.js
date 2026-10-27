@@ -330,8 +330,8 @@ class ReplayApp {
                 this.dom.replaySelect.appendChild(opt);
               });
             }
-            const randomIndex = Math.floor(Math.random() * replays.length);
-            const chosen = replays[randomIndex];
+            const defaultReplay = replays.find((r) => r.file.includes('3003') || r.laps >= 10) || replays[0];
+            const chosen = defaultReplay;
             if (this.dom.replaySelect) {
               this.dom.replaySelect.value = chosen.file;
             }

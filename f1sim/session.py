@@ -60,49 +60,7 @@ DEFAULT_CAR_SPECS = [
 ]
 
 
-from f1sim.world import MultiCarWorld, validate_seed
-
-
-class CarEnvWrapper:
-    """
-    Wrapper around the shared MultiCarWorld environment presenting standard Gym env
-    semantics for a specific car (e.g. for inspection and compatibility).
-    """
-
-    def __init__(self, mcw: MultiCarWorld, car_id: str):
-        self.mcw = mcw
-        self.car_id = car_id
-        self.car = mcw.cars[car_id]
-        self._env = mcw.env
-
-    @property
-    def unwrapped(self):
-        class UnwrappedProxy:
-            def __init__(proxy_self, uw, car, mcw):
-                proxy_self._uw = uw
-                proxy_self.car = car
-                proxy_self.world = mcw.world
-                proxy_self.track = mcw.track
-                proxy_self.t = uw.t
-
-            def __getattr__(proxy_self, item):
-                return getattr(proxy_self._uw, item)
-
-        return UnwrappedProxy(self._env.unwrapped, self.car, self.mcw)
-
-    def reset(self, seed=None):
-        # Already placed on staggered starting grid in MultiCarWorld
-        return self.mcw._get_car_observation(self.car), {}
-
-    def step(self, action):
-        # Stepping is handled synchronously by MultiCarWorld
-        return None, 0.0, False, False, {}
-
-    def close(self):
-        pass
-
-    def __getattr__(self, item):
-        return getattr(self._env, item)
+from f1sim.world import MultiCarWorld, validate_seed, CarEnvWrapper
 
 
 class RaceSession:
