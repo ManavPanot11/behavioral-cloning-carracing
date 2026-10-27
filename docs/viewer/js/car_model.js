@@ -461,20 +461,46 @@ export class F1Car {
     return this.customConfig;
   }
 
-  update(state, dt = 0.02) {
-    if (!state) return;
+  update(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, dt = 0.02) {
+    if (arg1 === undefined || arg1 === null) return;
+
+    let x = 0, y = 0, hullAngle = 0, steer = 0, gas = 0, brake = 0, speed = 0, latG = 0;
+
+    if (typeof arg1 === 'object') {
+      const state = arg1;
+      x = Number(state.x) || 0.0;
+      y = Number(state.y) || 0.0;
+      hullAngle = state.hull_angle !== undefined 
+        ? Number(state.hull_angle) 
+        : ((state.heading !== undefined ? Number(state.heading) - Math.PI / 2 : 0.0));
+      steer = Number(state.steer) || 0.0;
+      gas = Number(state.gas) || 0.0;
+      brake = Number(state.brake) || 0.0;
+      speed = Number(state.speed) || 0.0;
+      latG = state.lateral_g !== undefined ? Number(state.lateral_g) : (steer * speed * 0.015);
+      if (typeof arg2 === 'number') dt = arg2;
+    } else {
+      x = Number(arg1) || 0.0;
+      y = Number(arg2) || 0.0;
+      hullAngle = arg3 !== undefined ? Number(arg3) : 0.0;
+      steer = Number(arg4) || 0.0;
+      gas = Number(arg5) || 0.0;
+      brake = Number(arg6) || 0.0;
+      speed = Number(arg7) || 0.0;
+      latG = arg8 !== undefined ? Number(arg8) : (steer * speed * 0.015);
+      if (typeof dt !== 'number') dt = 0.02;
+    }
 
     // 1. Position mapping: Sim (x, y) -> 3D (x, 0, -y)
-    this.root.position.x = state.x;
+    this.root.position.x = x;
     this.root.position.y = 0;
-    this.root.position.z = -state.y;
+    this.root.position.z = -y;
 
     // 2. Heading rotation: rotation.y = hull_angle
-    const hullAngle = state.hull_angle !== undefined ? state.hull_angle : (state.heading - Math.PI / 2);
     this.root.rotation.y = hullAngle;
 
     // 3. Front Wheel Steering Angle
-    const steerRad = (state.steer || 0.0) * 0.42;
+    const steerRad = steer * 0.42;
 
     // Procedural front wheels
     if (this.flSteer && this.frSteer) {
@@ -491,7 +517,6 @@ export class F1Car {
     }
 
     // 4. Wheel Spin Rotation from Speed
-    const speed = state.speed || 0.0;
     const wheelR = 0.54;
     const angularDist = (speed * dt) / wheelR;
     this.wheelSpinAngle -= angularDist;
@@ -510,7 +535,7 @@ export class F1Car {
     }
 
     // 5. Brake Light Glow
-    const isBraking = (state.brake || 0.0) > 0.05;
+    const isBraking = brake > 0.05;
     if (this.blMat) {
       if (isBraking) {
         this.blMat.color.setHex(0xff1744);
@@ -535,8 +560,8 @@ export class F1Car {
     }
 
     // 6. Cosmetic Pitch & Roll Dynamics
-    const pitchAmount = (state.brake || 0.0) * -0.045 + (state.gas || 0.0) * 0.025;
-    const lateralG = state.lateral_g || (state.steer * speed * 0.015);
+    const pitchAmount = brake * -0.045 + gas * 0.025;
+    const lateralG = latG;
     const rollAmount = THREE.MathUtils.clamp(lateralG * -0.06, -0.08, 0.08);
 
     this.carBody.rotation.x = THREE.MathUtils.lerp(this.carBody.rotation.x, pitchAmount, 0.2);

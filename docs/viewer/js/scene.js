@@ -476,6 +476,7 @@ export class TrackScene {
   }
 
   emitSparks(position, count = 25) {
+    if (!position || isNaN(position.x) || isNaN(position.y) || isNaN(position.z)) return;
     // Cosmetic collision sparks
     const geom = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
